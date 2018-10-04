@@ -58,12 +58,16 @@ AND stpe.sety_ref_num IN (5802234) /*(SELECT DISTINCT prli.sety_ref_num sety_ref
                                                     AND sety.ref_num = ficv.sety_ref_num
                                                     AND NVL (sety.station_param, '*') NOT IN ('KER', 'ARVE', 'TEAV'))*/
 ), q5 as (
-select susg_ref_num, trunc(start_date) +1 start_datex, nvl(trunc(end_date), date '2018-08-31')+ 1-1/24/60/60 end_datex, start_date start_datessg, end_date end_datessg 
+select susg_ref_num, start_date, end_date, rnk, last_status from (
+select susg_ref_num, start_date, end_date, status_code
+,rank() over (partition by susg_ref_num order by start_date) rnk
+,lag(status_code) over (partition by susg_ref_num order by start_date) last_status  
 --,count(*) over (partition by susg_ref_num)
 from ssg_statuses stpe
+)
 where  1=1
-AND NVL (stpe.end_date, date '2018-08-01') >= date '2018-08-01'
-AND stpe.start_date <= date '2018-08-31'
+AND NVL (end_date, date '2018-08-01') >= date '2018-08-01'
+AND start_date <= date '2018-08-31'
 and status_code = 'AC'
 ), q6 as (
 select susg_ref_num, sety_ref_num, start_date, end_date, sepa_ref_num, sepv_ref_num from subs_service_parameters susp
@@ -86,23 +90,28 @@ AND mose.mipo_ref_num = mipo.ref_num
 AND (coalesce(ftco.date_closed, ftco.end_date, date '2018-08-31'+1)  between date '2018-08-01' AND date '2018-08-31'
 OR ftco.start_date between date '2018-08-01' AND date '2018-08-31')
 )
-select /*+ MONITOR LEADING(t)*/ q4.*, q5.*, q6.*, q7.*, t.* 
+select /*+ MONITOR LEADING(t)*/ t.maac, t.susg, t.cat, t.sept_type_code, t.start_date supa_start, t.end_date supa_end,
+q4.sety_ref_num, q4.start_date serv_start, q4.end_date serv_end, q5.start_date act_start, q5.end_date act_end, q5.rnk, last_status
+,case when trunc(q5.start_date) = trunc(q5.end_date) OR trunc(q4.start_date) = trunc(q4.end_date) then 0 else 1 end active
+,GREATEST(t.start_date, trunc(q4.start_date)+1, trunc(q5.start_date)+1, date '2018-08-01') start_date 
+,LEAST(nvl(t.end_date, date '2018-08-31') , nvl(trunc(q4.end_date), date '2018-08-31'), nvl(trunc(q5.end_date), date '2018-08-31'), date '2018-08-31') end_date 
+--q4.*, q5.* --q6.*, q7.*, 
 from table(xx_aj.get_list_susg_f (date '2018-08-01', date '2018-08-31', 
-102,
+--102,
 --13796675, 
 --14251850,
 --14606161,
 --15145486,
---15369942,
+15369942,
 15815200, 
 --15814666,
 --15814666,
-'MN1')) t JOIN q4 ON q4.susg_ref_num = t.susg
+'MN2')) t JOIN q4 ON q4.susg_ref_num = t.susg
           JOIN q5 ON q5.susg_ref_num = t.susg
-     LEFT JOIN q6 ON q6.susg_ref_num = t.susg and q6.sety_ref_num = q4.sety_ref_num
-     LEFT JOIN q7 ON q7.susg_ref_num = t.susg --and q7.sety_ref_num = q4.sety_ref_num
+--     LEFT JOIN q6 ON q6.susg_ref_num = t.susg and q6.sety_ref_num = q4.sety_ref_num
+--     LEFT JOIN q7 ON q7.susg_ref_num = t.susg --and q7.sety_ref_num = q4.sety_ref_num
 where 1=1
-and q7.susg_ref_num is not null
+--and q7.susg_ref_num is not null
 --and (t.start_date between q5.start_date and nvl(q5.end_date, date '2018-08-31'+1) OR q5.start_date between t.start_date and nvl(t.end_date, date '2018-08-31'+1))
 order by t.susg
 
@@ -478,3 +487,65 @@ AND ftco.mixed_packet_code = mipo.mixed_packet_code
 AND ftco.ebs_order_number = mipo.ebs_order_number
 AND Nvl(mipo.term_request_type, '*') <> 'NULLIFY'
 AND mose.mipo_ref_num = mipo.ref_num
+
+
+with q1 as (
+select ftco.sept_type_code, ftco.mixed_packet_code, mose.sety_ref_num, 
+ftco.susg_ref_num, 
+greatest(ftco.start_date,date '2018-08-01') start_date, 
+least(coalesce(ftco.date_closed, ftco.end_date, date '2018-08-31'),date '2018-08-31')  end_date 
+from fixed_term_contracts ftco
+, mixed_packet_orders  mipo
+, mixed_order_services mose
+where 1=1
+   and mose.sety_ref_num = 5802234
+AND ftco.mixed_packet_code = mipo.mixed_packet_code
+AND ftco.ebs_order_number = mipo.ebs_order_number
+AND Nvl(mipo.term_request_type, '*') <> 'NULLIFY'
+AND mose.mipo_ref_num = mipo.ref_num
+--AND coalesce(ftco.date_closed, ftco.end_date, date '2018-08-01') >= date '2018-08-01'
+--AND ftco.start_date <= date '2018-08-31'
+AND (coalesce(ftco.date_closed, ftco.end_date, date '2018-08-31'+1)  between date '2018-08-01' AND date '2018-08-31'
+OR ftco.start_date between date '2018-08-01' AND date '2018-08-31')
+), q2 as (
+select sept_type_code, mixed_packet_code, sety_ref_num, susg_ref_num,
+date '2018-08-01' start_date, date '2018 -08-31' end_date 
+from q1
+), q3 as (
+select * from q1
+union all
+select * from q2
+)
+select * from q3
+order by susg_ref_num 
+
+
+with q1 as (
+select susg_ref_num, sety_ref_num, greatest(trunc(start_date+1-1/24/60/60), date '2018-08-01') start_date, least(coalesce(trunc(end_date), date '2018-08-31'), date '2018-08-31') end_date, sepa_ref_num, sepv_ref_num 
+from subs_service_parameters susp
+where  1=1
+and sety_ref_num = 5802234
+and susg_ref_num = 269315
+AND (coalesce(susp.end_date, date '2018-08-31'+1)  between date '2018-08-01' AND date '2018-08-31'
+OR susp.start_date between date '2018-08-01' AND date '2018-08-31')
+), q2 as (
+select  SUSG_REF_NUM, SETY_REF_NUM, date '2018-08-01' START_DATE, date '2018-08-31' END_DATE, 0 SEPA_REF_NUM, 0 SEPV_REF_NUM
+from q1
+group by SUSG_REF_NUM, SETY_REF_NUM
+), q3 as (
+select q1.*, 0 fullrange from q1
+union all
+select q2.*, 1 fullrange from q2
+), q4 as (
+select q3.*, lead(start_date) over (partition by susg_ref_num, sety_ref_num order by fullrange desc, start_date) next_date,
+lag(end_date) over (partition by susg_ref_num, sety_ref_num order by fullrange, end_date) prev_date 
+from q3
+)
+select SUSG_REF_NUM, SETY_REF_NUM, START_DATE, END_DATE, SEPA_REF_NUM, SEPV_REF_NUM, FULLRANGE, NEXT_DATE, PREV_DATE
+from q4
+where fullrange=0  OR (fullrange=1 AND next_date > end_date+1)
+union all
+select SUSG_REF_NUM, SETY_REF_NUM, end_DATE start_date, NEXT_DATE end_date, 0, 0, FULLRANGE, NEXT_DATE, PREV_DATE
+from q4
+where next_date > end_date + 1 OR (fullrange=1 AND prev_date < start_date-1)
+order by 1 , 3
