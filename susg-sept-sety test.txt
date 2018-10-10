@@ -1,5 +1,3 @@
-1	58000	2120408000
-
 select decile, count(*), min(ref_num), max(ref_num) from (
 select ref_num, ntile(5) over (order by ref_num) decile 
 from subs_serv_groups
@@ -23,80 +21,10 @@ group by decile
 15145486	15369941
 15369942	15815200
 
+select /* MONITOR */ t1.* 
+from table(xx_aj.get_list_susg_f (date '2018-08-01', date '2018-08-31', 14606161, 15145485, 'MN4')) t1
 
-with q4 as (
-select susg_ref_num, sety_ref_num, start_date, end_date , count(*) over (partition by susg_ref_num, sety_ref_num) c
-from status_periods stpe
-where 1=1--susg_ref_num = 15809412
-AND NVL (stpe.end_date, date '2018-08-01') >= date '2018-08-01'
-AND stpe.start_date <= date '2018-08-31'
-AND stpe.sety_ref_num IN (5802234) /*(SELECT DISTINCT prli.sety_ref_num sety_ref_num
-                                                   FROM price_lists prli, service_types sety
-                                                  WHERE NVL (prli.par_value_charge, 'N') = 'N'
-                                                    AND prli.once_off = 'N'
-                                                    AND prli.pro_rata = 'N'
-                                                    AND prli.regular_charge = 'Y'
-                                                    -- CHG-1241                   AND    prli.charge_value > 0
-                                                    AND prli.start_date <= date '2018-08-31'
-                                                    AND NVL (prli.end_date, date '2018-08-01') >= date '2018-08-01'
-                                                    AND sety.ref_num = prli.sety_ref_num
-                                                    AND NVL (sety.station_param, '*') NOT IN ('KER', 'ARVE', 'TEAV')
-                                        UNION
-                                        SELECT DISTINCT ficv.sety_ref_num sety_ref_num
-                                                   FROM fixed_charge_values ficv
-                                                       ,fixed_charge_item_types fcit
-                                                       ,service_types sety
-                                                  WHERE ficv.chca_type_code IS NULL
-                                                    AND NVL (ficv.par_value_charge, 'N') = 'N'
-                                                    -- CHG-1241                   AND    ficv.charge_value > 0
-                                                    AND ficv.fcit_charge_code = fcit.type_code
-                                                    AND fcit.once_off = 'N'
-                                                    AND fcit.pro_rata = 'N'
-                                                    AND fcit.regular_charge = 'Y'
-                                                    AND ficv.start_date <= date '2018-08-31'
-                                                    AND NVL (ficv.end_date, date '2018-08-01') >= date '2018-08-01'
-                                                    AND sety.ref_num = ficv.sety_ref_num
-                                                    AND NVL (sety.station_param, '*') NOT IN ('KER', 'ARVE', 'TEAV'))*/
-), q5 as (
-select susg_ref_num, start_date, end_date, rnk, last_status from (
-select susg_ref_num, start_date, end_date, status_code
-,rank() over (partition by susg_ref_num order by start_date) rnk
-,lag(status_code) over (partition by susg_ref_num order by start_date) last_status  
---,count(*) over (partition by susg_ref_num)
-from ssg_statuses stpe
-)
-where  1=1
-AND NVL (end_date, date '2018-08-01') >= date '2018-08-01'
-AND start_date <= date '2018-08-31'
-and status_code = 'AC'
-), q6 as (
-select susg_ref_num, sety_ref_num, start_date, end_date, sepa_ref_num, sepv_ref_num from subs_service_parameters susp
-where  1=1
-AND NVL (susp.end_date, date '2018-08-01') >= date '2018-08-01'
-AND susp.start_date <= date '2018-08-31'
-), q7 as (
-select ftco.sept_type_code, ftco.mixed_packet_code, mose.sety_ref_num, ftco.susg_ref_num, ftco.start_date, coalesce(ftco.date_closed, ftco.end_date, trunc(sysdate)+1) nend 
-from fixed_term_contracts ftco
-, mixed_packet_orders  mipo
-, mixed_order_services mose
-where 1=1
-   and mose.sety_ref_num = 5802234
-AND ftco.mixed_packet_code = mipo.mixed_packet_code
-AND ftco.ebs_order_number = mipo.ebs_order_number
-AND Nvl(mipo.term_request_type, '*') <> 'NULLIFY'
-AND mose.mipo_ref_num = mipo.ref_num
---AND coalesce(ftco.date_closed, ftco.end_date, date '2018-08-01') >= date '2018-08-01'
---AND ftco.start_date <= date '2018-08-31'
-AND (coalesce(ftco.date_closed, ftco.end_date, date '2018-08-31'+1)  between date '2018-08-01' AND date '2018-08-31'
-OR ftco.start_date between date '2018-08-01' AND date '2018-08-31')
-)
-select /*+ MONITOR LEADING(t)*/ t.maac, t.susg, t.cat, t.sept_type_code, t.start_date supa_start, t.end_date supa_end,
-q4.sety_ref_num, q4.start_date serv_start, q4.end_date serv_end, q5.start_date act_start, q5.end_date act_end, q5.rnk, last_status
-,case when trunc(q5.start_date) = trunc(q5.end_date) OR trunc(q4.start_date) = trunc(q4.end_date) then 0 else 1 end active
-,GREATEST(t.start_date, trunc(q4.start_date)+1, trunc(q5.start_date)+1, date '2018-08-01') start_date 
-,LEAST(nvl(t.end_date, date '2018-08-31') , nvl(trunc(q4.end_date), date '2018-08-31'), nvl(trunc(q5.end_date), date '2018-08-31'), date '2018-08-31') end_date 
---q4.*, q5.* --q6.*, q7.*, 
-from table(xx_aj.get_list_susg_f (date '2018-08-01', date '2018-08-31', 
+select * from table(xx_aj.get_list_susg_f (date '2018-08-01', date '2018-08-31', 
 --102,
 --13796675, 
 --14251850,
@@ -104,178 +32,79 @@ from table(xx_aj.get_list_susg_f (date '2018-08-01', date '2018-08-31',
 --15145486,
 --15369942,
 --15815200, 
-15807528,
-15807528,
-'NB2')) t JOIN q4 ON q4.susg_ref_num = t.susg
-          JOIN q5 ON q5.susg_ref_num = t.susg
---     LEFT JOIN q6 ON q6.susg_ref_num = t.susg and q6.sety_ref_num = q4.sety_ref_num
---     LEFT JOIN q7 ON q7.susg_ref_num = t.susg --and q7.sety_ref_num = q4.sety_ref_num
-where 1=1
---and q7.susg_ref_num is not null
---and (t.start_date between q5.start_date and nvl(q5.end_date, date '2018-08-31'+1) OR q5.start_date between t.start_date and nvl(t.end_date, date '2018-08-31'+1))
-order by t.susg
-
-select * from v$session
+15373059,
+15373059,
+'MN4'))
+where susg = 15373059
 
 select a.* from subs_serv_groups susg ,accounts a
-where susg.ref_num = 15807528
+where susg.ref_num = 6458879
 and trunc(susg.suac_ref_num, -3) = a.ref_num
+
+
+select * from status_periods stpe
+where 1=1 
+--AND stpe.sety_ref_num = 5802234
+AND NVL (stpe.end_date, date '2018-08-01' + 1) > date '2018-08-01'
+AND stpe.start_date < date '2018-08-31' + 1
+and susg_ref_num not in ( 
+select gsm_susg_ref_num
+from subs_packages supa
+where 1=1
+AND NVL (supa.end_date, date '2018-08-01' ) >= date '2018-08-01'
+AND supa.start_date <= date '2018-08-31'
+)
 
 select * from fixed_term_contracts susp
 where  1=1
 AND NVL (susp.end_date, date '2018-08-01') >= date '2018-08-01'
 AND susp.start_date <= date '2018-08-31'
 
-with q3 as (
-select ref_num, count(*) over (partition by ref_num) c 
-from accounts where bicy_cycle_code = 'MN4'
-AND ref_num NOT IN (SELECT TO_NUMBER (value_code) AS large_maac_ref_num
-                                                          FROM bcc_domain_values
-                                                         WHERE doma_type_code = 'LAMA')
-)
-select /* MONITOR */ t1.* 
-from table(xx_aj.get_list_susg (date '2018-08-01', date '2018-08-31', 14606161, 15145485)) t1, q3
-where t1.maac = q3.ref_num
-
-
-select /* MONITOR */ t1.* 
-from table(xx_aj.get_list_susg_f (date '2018-08-01', date '2018-08-31', 14606161, 15145485, 'MN4')) t1
-
-
-select susg from qx, q3
-where q3.ref_num = qx.maac_ref_num
-
-select decile, count(*), min(susg), max(susg) from (
-select /*+ MONITOR GATHER_PLAN_STATISTICS */ q2.gsm_susg_ref_num susg, ntile(10) over (order by q2.gsm_susg_ref_num) decile
-from q2
-)
-group by decile
-
-select * 
-
-
-
-select * from subs_packages
-where gsm_susg_ref_num=4147989
-
 select * from status_periods stpe
-where susg_ref_num=4147989
+where 1=1 
+susg_ref_num=4147989
 AND NVL (stpe.end_date, date '2018-08-01') >= date '2018-08-01'
 AND stpe.start_date <= date '2018-08-31'
+order by 3
 
-select decile, count(*), min(ref_num), max(ref_num) from (
-select q3.ref_num, ntile(5) over (order by q3.ref_num) decile
-from q2, q3
-where q2.maac_ref_num = q3.ref_num
-)
-group by decile
-
-select decile, count(*) 
-from (
-select ref_num,  ntile(5) over (order by gsm_susg_ref_num) decile
-from subs_packages supa
-where 1=1
-AND NVL (supa.end_date, date '2018-08-01') >= date '2018-08-01'
-AND supa.start_date <= date '2018-08-31'
-)
-group by decile
-
-
-
-with q1 as (
-select sept.type_code, sept.category, count(*) over (partition by sept.type_code) c 
-from package_categories paca, serv_package_types sept
-where paca.end_date IS NULL
-AND sept.CATEGORY = paca.package_category
-AND paca.nety_type_code = NVL (sept.nety_type_code, 'GSM')
-AND paca.prepaid <> 'Y'
-), q2 as (
-select supa.sept_type_code, supa.gsm_susg_ref_num, supa.start_date, supa.end_date, supa.suac_ref_num, TRUNC (supa.suac_ref_num, -3) maac_ref_num, q1.category, 
-count(*) over (partition by sept_type_code, gsm_susg_ref_num) c
-from subs_packages supa, q1
-where 1=1
-AND NVL (supa.end_date, date '2018-08-01') >= date '2018-08-01'
-AND supa.start_date <= date '2018-08-31'
-AND q1.type_code = supa.sept_type_code
-AND TRUNC (supa.suac_ref_num, -3) NOT IN (SELECT TO_NUMBER (value_code) AS large_maac_ref_num
-                                                          FROM bcc_domain_values
-                                                         WHERE doma_type_code = 'LAMA')
-), q3 as (
-select ref_num from accounts where bicy_cycle_code = 'MN2' and ref_num between 58000 and 2120408000
-), q4 as (
-select susg_ref_num, sety_ref_num, start_date, end_date , count(*) over (partition by susg_ref_num, sety_ref_num) c
-from status_periods stpe
-where 1=1--susg_ref_num = 10702452
-AND NVL (stpe.end_date, date '2018-08-01') >= date '2018-08-01'
-AND stpe.start_date <= date '2018-08-31'
-AND stpe.sety_ref_num IN (SELECT DISTINCT prli.sety_ref_num sety_ref_num
-                                                   FROM price_lists prli, service_types sety
-                                                  WHERE NVL (prli.par_value_charge, 'N') = 'N'
-                                                    AND prli.once_off = 'N'
-                                                    AND prli.pro_rata = 'N'
-                                                    AND prli.regular_charge = 'Y'
-                                                    -- CHG-1241                   AND    prli.charge_value > 0
-                                                    AND prli.start_date <= date '2018-08-31'
-                                                    AND NVL (prli.end_date, date '2018-08-01') >= date '2018-08-01'
-                                                    AND sety.ref_num = prli.sety_ref_num
-                                                    AND NVL (sety.station_param, '*') NOT IN ('KER', 'ARVE', 'TEAV')
-                                        UNION
-                                        SELECT DISTINCT ficv.sety_ref_num sety_ref_num
-                                                   FROM fixed_charge_values ficv
-                                                       ,fixed_charge_item_types fcit
-                                                       ,service_types sety
-                                                  WHERE ficv.chca_type_code IS NULL
-                                                    AND NVL (ficv.par_value_charge, 'N') = 'N'
-                                                    -- CHG-1241                   AND    ficv.charge_value > 0
-                                                    AND ficv.fcit_charge_code = fcit.type_code
-                                                    AND fcit.once_off = 'N'
-                                                    AND fcit.pro_rata = 'N'
-                                                    AND fcit.regular_charge = 'Y'
-                                                    AND ficv.start_date <= date '2018-08-31'
-                                                    AND NVL (ficv.end_date, date '2018-08-01') >= date '2018-08-01'
-                                                    AND sety.ref_num = ficv.sety_ref_num
-                                                    AND NVL (sety.station_param, '*') NOT IN ('KER', 'ARVE', 'TEAV'))
-), q5 as (
-select susg_ref_num, trunc(start_date) +1 start_date, nvl(trunc(end_date), date '2018-08-31')+ 1-1/24/60/60 end_date 
-,count(*) over (partition by susg_ref_num)
+select susg_ref_num, start_date, end_date, trunc(start_date) +1 , nvl(trunc(end_date), date '2018-08-31')+ 1-1/24/60/60 
 from ssg_statuses stpe
-where  1=1
-AND NVL (stpe.end_date, date '2018-08-01') >= date '2018-08-01'
-AND stpe.start_date <= date '2018-08-31'
-and status_code = 'AC'
-)
-select q4.susg_ref_num, q4.sety_ref_num, q2.sept_type_code, q2.maac_ref_num, 
-GREATEST (q4.start_date, q2.start_date, q5.start_date, date '2018-08-01') start_date
-                 ,LEAST (NVL (q4.end_date, date '2018-08-31' + 1 - 1/24/60/60)
-                        ,NVL (q2.end_date + 1 - 1/24/60/60, date '2018-08-31' + 1 - 1/24/60/60)
-                        ,q5.end_date
-                        ,date '2018-08-31' + 1 - 1/24/60/60
-                        ) end_date
-,q2.category--, q3.bicy_cycle_code
-,q5.start_date susg_start_date, q5.end_date susg_end_date 
-from q2,  q3, q4, q5
-where q2.maac_ref_num = q3.ref_num
-and q2.gsm_susg_ref_num = q4.susg_ref_num 
-and q2.gsm_susg_ref_num = q5.susg_ref_num 
-AND NVL (q2.end_date, q4.start_date) >= TRUNC (q4.start_date)
-AND q2.start_date <= NVL (q4.end_date, q2.start_date)
-AND (CASE WHEN Trunc(q4.end_date) = q2.start_date AND q4.start_date < q2.start_date THEN 0 ELSE 1 END) <> 0
---and q2.gsm_susg_ref_num = 15811504
-and (q2.start_date between q5.start_date and nvl(q5.end_date, date '2018-08-31'+1) OR q5.start_date between q2.start_date and nvl(q2.end_date, date '2018-08-31'+1))
-ORDER BY q2.suac_ref_num, q4.susg_ref_num, q4.sety_ref_num, q4.start_date, q4.start_date   -- CHG-3704
-
-
-select susg_ref_num, start_date, end_date, trunc(start_date) +1 , nvl(trunc(end_date), date '2018-08-31')+ 1-1/24/60/60 from ssg_statuses stpe
 where  1=1
 AND NVL (stpe.end_date, date '2018-08-01') >= date '2018-08-01'
 AND stpe.start_date <= date '2018-08-31'
 and status_code = 'AC'
 and susg_ref_num = 15811504
 
+with q1 as (
+select lead(ssgs.start_date) over (partition by ssgs.susg_ref_num order by ssgs.start_date, ssgs.end_date) next_date,
+lag(ssgs.end_date) over (partition by ssgs.susg_ref_num order by ssgs.end_date, ssgs.start_date) prev_date,
+lead(ssgs.status_code) over (partition by ssgs.susg_ref_num order by ssgs.start_date, ssgs.end_date) next_status,
+lag(ssgs.status_code) over (partition by ssgs.susg_ref_num order by ssgs.end_date, ssgs.start_date) prev_status,
+ssgs.*
+from ssg_statuses ssgs
+where 1=1
+and ssgs.susg_ref_num = 59976
+)
+select * from q1
+where status_code = 'AC'
+and start_date < date '2018-08-31' + 1
+and coalesce(end_date, date '2018-08-01' + 1) > date '2018-08-01'
+--and susg_ref_num =  15318911
+--and end_date - start_date < 0.5
 
-
-select * from subs_packages
-where gsm_susg_ref_num = 11447578
+SELECT   LEAST (DECODE (ssst.status_code, 'TC', (ADD_MONTHS (ssst.start_date, 0) - 1), date '2018-08-31')
+                        ,NVL (ssst.end_date, date '2018-08-31')
+                        ,date '2018-08-31'
+                        ) end_date
+                 ,GREATEST (ssst.start_date, date '2018-08-01') start_date
+                 ,ssst.status_code status_code
+             FROM ssg_statuses ssst
+            WHERE TRUNC (ssst.start_date) <= date '2018-08-31'   ----hh
+              AND NVL (ssst.end_date, date '2018-08-01') >= date '2018-08-01'
+              AND ssst.status_code IN ('AC', 'TC')
+              AND ssst.susg_ref_num = 15790516
+              --eeAND ssst.susg_ref_num = 15318911
+         ORDER BY ssst.start_date;
 
 select * from subs_packages supa
 where  ((supa.end_date <= date '2018-08-31' AND supa.end_date >= date '2018-08-01') OR (supa.start_date >= date '2018-08-01' AND supa.start_date <= date '2018-08-31'))
@@ -286,126 +115,6 @@ where  ((susp.end_date <= date '2018-08-31' AND susp.end_date >= date '2018-08-0
 and trunc(start_date) != trunc(nvl(end_date, date '2018-08-31' + 1))
 and 
 susg_ref_num = 6542464
-
-
-
-select * from status_periods stpe
-where susg_ref_num = 6542464
-AND NVL (stpe.end_date, date '2018-08-01') >= date '2018-08-01'
-AND stpe.start_date <= date '2018-08-31'
-order by 3
-
-15805756
-
-with q1 as (
-select sept.type_code, sept.category, count(*) over (partition by sept.type_code) c 
-from package_categories paca, serv_package_types sept
-where paca.end_date IS NULL
-AND sept.CATEGORY = paca.package_category
-AND paca.nety_type_code = NVL (sept.nety_type_code, 'GSM')
-AND paca.prepaid <> 'Y'
-), q2 as (
-select supa.sept_type_code, supa.gsm_susg_ref_num, 
-GREATEST(supa.start_date, date '2018-08-01') start_date, LEAST(nvl(supa.end_date, date '2018-08-31'), date '2018-08-31') end_date, 
-supa.suac_ref_num, TRUNC (supa.suac_ref_num, -3) maac_ref_num, q1.category, 
-count(*) over (partition by sept_type_code, gsm_susg_ref_num) c
-from subs_packages supa, q1
-where 1=1
-AND NVL (supa.end_date, date '2018-08-01') >= date '2018-08-01'
-AND supa.start_date <= date '2018-08-31'
-AND q1.type_code = supa.sept_type_code
-AND TRUNC (supa.suac_ref_num, -3) NOT IN (SELECT TO_NUMBER (value_code) AS large_maac_ref_num
-                                                          FROM bcc_domain_values
-                                                         WHERE doma_type_code = 'LAMA')
-), q3 as (
-select ref_num from accounts --where bicy_cycle_code = 'MN2'
-)
-select q2.* 
-from q2, q3
-where q2.maac_ref_num = q3.ref_num
-and q2.gsm_susg_ref_num = 13387786
-order by c desc
-
-
-with q4 as (
-select susg_ref_num, sety_ref_num, start_date, end_date , count(*) over (partition by susg_ref_num, sety_ref_num) c
-from status_periods stpe
-where 1=1--susg_ref_num = 10702452
-AND NVL (stpe.end_date, date '2018-08-01') >= date '2018-08-01'
-AND stpe.start_date <= date '2018-08-31'
-AND stpe.sety_ref_num IN (SELECT DISTINCT prli.sety_ref_num sety_ref_num
-                                                   FROM price_lists prli, service_types sety
-                                                  WHERE NVL (prli.par_value_charge, 'N') = 'N'
-                                                    AND prli.once_off = 'N'
-                                                    AND prli.pro_rata = 'N'
-                                                    AND prli.regular_charge = 'Y'
-                                                    -- CHG-1241                   AND    prli.charge_value > 0
-                                                    AND prli.start_date <= date '2018-08-31'
-                                                    AND NVL (prli.end_date, date '2018-08-01') >= date '2018-08-01'
-                                                    AND sety.ref_num = prli.sety_ref_num
-                                                    AND NVL (sety.station_param, '*') NOT IN ('KER', 'ARVE', 'TEAV')
-                                        UNION
-                                        SELECT DISTINCT ficv.sety_ref_num sety_ref_num
-                                                   FROM fixed_charge_values ficv
-                                                       ,fixed_charge_item_types fcit
-                                                       ,service_types sety
-                                                  WHERE ficv.chca_type_code IS NULL
-                                                    AND NVL (ficv.par_value_charge, 'N') = 'N'
-                                                    -- CHG-1241                   AND    ficv.charge_value > 0
-                                                    AND ficv.fcit_charge_code = fcit.type_code
-                                                    AND fcit.once_off = 'N'
-                                                    AND fcit.pro_rata = 'N'
-                                                    AND fcit.regular_charge = 'Y'
-                                                    AND ficv.start_date <= date '2018-08-31'
-                                                    AND NVL (ficv.end_date, date '2018-08-01') >= date '2018-08-01'
-                                                    AND sety.ref_num = ficv.sety_ref_num
-                                                    AND NVL (sety.station_param, '*') NOT IN ('KER', 'ARVE', 'TEAV'))
-), q5 as (
-select count(*) over (partition by susg_ref_num, sety_ref_num) c, susp.* from subs_service_parameters susp
-where 1=1
-AND NVL (susp.end_date, date '2018-08-01') >= date '2018-08-01'
-AND susp.start_date <= date '2018-08-31'
-)
-select * from q4, q5
-where q4.susg_ref_num = 15048574
-and q4.susg_ref_num = q5.susg_ref_num
-and q4.sety_ref_num = q5.sety_ref_num 
-and (q4.start_date between q5.start_date and nvl(q5.end_date, date '2018-08-31'+1) OR q5.start_date between q4.start_date and nvl(q4.end_date, date '2018-08-31'+1))
-order by q4.c desc
-
-
-
-
-
-select susp.* from subs_service_parameters susp
-where  ((susp.end_date <= date '2018-08-31' AND susp.end_date >= date '2018-08-01') OR (susp.start_date >= date '2018-08-01' AND susp.start_date <= date '2018-08-31'))
-and trunc(start_date) != trunc(nvl(end_date, date '2018-08-31' + 1))
-and 
-susg_ref_num = 13387786
-
-select count(*) over (partition by susg_ref_num, sety_ref_num) c, susp.* from subs_service_parameters susp
-where 1=1
-AND NVL (susp.end_date, date '2018-08-01') >= date '2018-08-01'
-AND susp.start_date <= date '2018-08-31'
-and susg_ref_num = 13387786
-
-
-
-
-select count(*) over (partition by susg_ref_num, sety_ref_num) c, susp.* from subs_service_parameters susp
-where 1=1
-AND NVL (susp.end_date, date '2018-08-31'+1) >= date '2018-08-31' +1
-AND susp.start_date <= date '2018-08-01'
-AND sety_ref_num = 5802234
-order by c desc
-
-select * from ssg_statuses sssg
-where 1=1
-AND NVL (sssg.end_date, date '2018-08-01') >= date '2018-08-01'
-AND sssg.start_date <= date '2018-08-31'
---and status_code = 'AC'
-and susg_ref_num = 15814666
-
 
 select decile, min(ref_num), max(ref_num) from (
 select acco.ref_num, bicy_cycle_code, ntile(5) over (order by ref_num) decile  
@@ -421,26 +130,6 @@ WHERE    1=1
 group by decile
 ;
 
-select * from subs_packages
-where gsm_susg_ref_num = 4791491
-
-select * from ssg_statuses
-where susg_ref_num=4791491
-
-select * from status_periods
-where susg_ref_num=4791491
-
-select * from (
-select status_code, susg_ref_num, start_date, nvl(end_date, trunc(sysdate)+1) nend, count(*) over (partition by susg_ref_num) c, 
-lag(end_date, 1, date '1990-01-01') over (partition by susg_ref_num order by start_date) eend
-from ssg_statuses
-where start_date <= end_date
-)
-where start_date < eend
-
-select * from service_types
-where ref_num = 5802234
-
 select * from service_types
 WHERE station_param = 'MINU'
 AND station_type = 'TSV'
@@ -452,37 +141,6 @@ SELECT *
 --           AND sept.type_code = supa.sept_type_code
 
 
-select sept_type_code, gsm_susg_ref_num, start_date, nvl(end_date, trunc(sysdate)+1) nend, count(*) over (partition by gsm_susg_ref_num) c, 
-lag(end_date, 1, date '1990-01-01') over (partition by gsm_susg_ref_num order by start_date) eend
-from subs_packages
-where start_date > end_date
-
-select status_code, susg_ref_num, start_date, nvl(end_date, trunc(sysdate)+1) nend, count(*) over (partition by susg_ref_num) c, 
-lag(end_date, 1, date '1990-01-01') over (partition by susg_ref_num order by start_date) eend
-from ssg_statuses
-where start_date > end_date
-
-select sety_ref_num, susg_ref_num, start_date, nvl(end_date, trunc(sysdate)+1) nend, count(*) over (partition by susg_ref_num, sety_ref_num) c, 
-lag(end_date, 1, date '1990-01-01') over (partition by susg_ref_num, sety_ref_num order by start_date) eend
-from status_periods
-where start_date > end_date
-
-select sept_type_code, mixed_packet_code, mosety_ref_num, susg_ref_num, start_date, coalesce(date_closed, end_date, trunc(sysdate)+1) nend, 
-count(*) over (partition by susg_ref_num, start_date, end_date, mixed_packet_code) c, 
-lag(end_date, 1, date '1990-01-01') over (partition by susg_ref_num order by start_date) eend
-from ( 
-select ftco.*, mose.sety_ref_num mosety_ref_num from fixed_term_contracts ftco
-, mixed_packet_orders  mipo
-, mixed_order_services mose
-where 1=1
-AND ftco.mixed_packet_code = mipo.mixed_packet_code
-AND ftco.ebs_order_number = mipo.ebs_order_number
-AND Nvl(mipo.term_request_type, '*') <> 'NULLIFY'
-AND mose.mipo_ref_num = mipo.ref_num
-)
-where trunc(start_date) < trunc(coalesce(date_closed, end_date))
-order by c desc, start_date desc
-
 select ftco.*, mose.sety_ref_num mosety_ref_num from fixed_term_contracts ftco
 , mixed_packet_orders  mipo
 , mixed_order_services mose
@@ -493,37 +151,7 @@ AND Nvl(mipo.term_request_type, '*') <> 'NULLIFY'
 AND mose.mipo_ref_num = mipo.ref_num
 
 
-with q1 as (
-select lead(ftco.start_date) over (partition by ftco.susg_ref_num, mose.sety_ref_num order by ftco.start_date) next_date, 
-lag(ftco.end_date) over (partition by ftco.susg_ref_num, mose.sety_ref_num order by ftco.start_date) prev_date,
-greatest(trunc(ftco.start_date+1-1/24/60/60), date '2018-08-01') startd, least(trunc(coalesce(ftco.date_closed, ftco.end_date, date '2018-08-31')), date '2018-08-31') endd, 
-ftco.ref_num, ftco.susg_ref_num, ftco.start_date, coalesce(ftco.date_closed, ftco.end_date) end_date, ftco.mixed_packet_code, mose.sety_ref_num
-from fixed_term_contracts ftco
-, mixed_packet_orders  mipo
-, mixed_order_services mose
-where 1=1
-   --and mose.sety_ref_num = 5802234
-   and ftco.susg_ref_num = 75161
-AND ftco.mixed_packet_code = mipo.mixed_packet_code
-AND ftco.ebs_order_number = mipo.ebs_order_number
-AND Nvl(mipo.term_request_type, '*') <> 'NULLIFY'
-AND mose.mipo_ref_num = mipo.ref_num
-AND coalesce(ftco.date_closed, ftco.end_date, date '2018-08-01') >= date '2018-08-01'
-AND ftco.start_date <= date '2018-08-31'
-and trunc(ftco.start_date+1-1/24/60/60) <= trunc(nvl(ftco.end_date, date '2018-08-31'))
-)
-select * from (
-select susg_Ref_num, sety_ref_num, null mixed_packet_code, date '2018-08-01' startd, startd-1 endd from q1
-where prev_date is null and startd > date '2018-08-01'
-union all
-select susg_Ref_num, sety_ref_num, null mixed_packet_code, endd+1 startd, nvl(next_date,date '2018-08-31') endd from q1
-where endd < date '2018-08-31' and nvl(next_date,date '2018-08-31')  > endd+1 --next_date is null 
-union all
-select susg_Ref_num, sety_ref_num, mixed_packet_code, startd, least(endd, nvl(trunc(next_date-1/24/60/60), date '2018-08-31')) from q1
-)
---where startd > date '2018-08-01' AND endd < date '2018-08-31'
-order by 1
-
+select calculate_fixed_charges.find_pack_days (date '2018-08-01', date '2018-08-31', 15790516, 0) from dual
 
 
 with q1 as (
@@ -542,21 +170,103 @@ AND susp.start_date <= date '2018-08-31'
 --OR susp.start_date between date '2018-08-01' AND date '2018-08-31')
 )
 select * from (
-select susg_Ref_num, sety_ref_num, sepa_ref_num, 0 sepv_ref_num, date '2018-08-01' startd, startd-1 endd from q1
+select susg_Ref_num, sety_ref_num, sepa_ref_num, 0 sepv_ref_num, date '2018-08-01' startd, startd-1 endd, start_date, end_date from q1
 where prev_date is null and startd > date '2018-08-01'
 union all
-select susg_Ref_num, sety_ref_num, sepa_ref_num, 0 sepv_ref_num, endd+1 startd, nvl(next_date,date '2018-08-31') endd from q1
+select susg_Ref_num, sety_ref_num, sepa_ref_num, 0 sepv_ref_num, endd+1 startd, nvl(next_date,date '2018-08-31') endd, start_date, end_date from q1
 where endd < date '2018-08-31' and nvl(next_date,date '2018-08-31')  > endd+1 --next_date is null 
 union all
-select susg_Ref_num, sety_ref_num, sepa_ref_num, sepv_ref_num, startd, endd from q1
+select susg_Ref_num, sety_ref_num, sepa_ref_num, sepv_ref_num, startd, endd, start_date, end_date from q1
 )
-where startd > date '2018-08-01' AND endd < date '2018-08-31'
+--where startd > date '2018-08-01' AND endd < date '2018-08-31'
 order by 1
 
-
-
-select * from dba_tables
-where table_name like '%EMT%'
-
 select * from emt_bill_price_list
-where sety_ref_num = 5802234
+where 1=1 
+--and sety_ref_num = 5802234
+and sept_type_code is null
+
+--and sepv_ref_num in ()
+and start_date < date '2018-09-01'
+
+
+declare 
+l_days_param NUMBER;
+l_success BOOLEAN;
+BEGIN
+calculate_fixed_charges.get_num_of_days(date '2018-08-02', date '2018-08-02'+1-1/24/60/60, 15790516, 5802234, 2021, 2523, 0, l_days_param, l_success);
+dbms_output.put_line(l_days_param || ' : ' );
+end;  
+
+
+declare
+CURSOR c_ebpl(p_sept_type_code VARCHAR2, p_end_date DATE, p_start_date DATE) IS
+SELECT   *
+FROM emt_bill_price_list
+WHERE chca_type_code IS NULL
+AND sept_type_code = p_sept_type_code
+AND sety_ref_num = 5802234
+AND start_date <= p_end_date
+AND NVL (end_date, p_start_date) >= p_start_date
+ORDER BY start_date, end_date;
+l_susg_serv_tab               get_susg_serv.t_susg_serv_tab;
+l_serv                        get_susg_serv.t_susg_serv;
+l_idx BINARY_INTEGER := 0;
+l_sety_days NUMBER;
+l_success BOOLEAN;
+FUNCTION fetch_serv (
+         p_serv  IN OUT NOCOPY  get_susg_serv.t_susg_serv
+      )
+         RETURN BOOLEAN IS
+      -- Returns TRUE IF no more records found.
+      BEGIN
+         IF (l_susg_serv_tab.LAST >= l_idx) THEN   --works correct also IF (l_susg_serv_tab.Last IS NULL)
+            p_serv := l_susg_serv_tab (l_idx);
+            l_idx := l_idx + 1;
+            RETURN FALSE;
+         END IF;
+         RETURN TRUE;
+END fetch_serv;
+begin
+get_susg_serv.get_susg_serv (13745000, date '2018-08-01', date '2018-08-31', l_susg_serv_tab, 6458879);
+l_idx := l_susg_serv_tab.FIRST;
+  IF fetch_serv (l_serv) THEN
+     --  dbms_output.put_line(To_Char(l_idx-1) || '. service NOT found');
+     GOTO nothing_to_do_with_serv;
+  END IF;
+  LOOP
+     if l_serv.sety_ref_num = 5802234 then
+     dbms_output.put_line('INDEX:' || l_idx);
+     dbms_output.put_line(l_serv.in_sept_type_code);
+     dbms_output.put_line(l_serv.sety_ref_num);
+     dbms_output.put_line(l_serv.start_date);
+     dbms_output.put_line(l_serv.end_date);
+     dbms_output.put_line(l_serv.susg_ref_num);
+     FOR l_price_list IN c_ebpl(l_serv.in_sept_type_code, l_serv.start_date, l_serv.end_date) LOOP
+         l_price_list.start_date := GREATEST (l_price_list.start_date, l_serv.start_date);
+         l_price_list.end_date := LEAST (NVL (l_price_list.end_date, l_serv.end_date), l_serv.end_date);
+         calculate_fixed_charges.get_num_of_days (l_price_list.start_date
+                            ,l_price_list.end_date
+                            ,l_serv.susg_ref_num
+                            ,l_price_list.sety_ref_num
+                            ,l_price_list.sepa_ref_num
+                            ,l_price_list.sepv_ref_num
+                            ,0   -- p_months_after NUMBER
+                            ,l_sety_days
+                            ,l_success
+                            );
+         --if l_sety_days > 0 then                   
+         dbms_output.put_line(l_price_list.start_date || ' - ' || l_price_list.end_date || ' ' || l_price_list.charge_value || ' ' || l_price_list.sepv_ref_num);
+         dbms_output.put_line(l_sety_days);
+         --end if;
+     END LOOP;
+     end if;
+     IF fetch_serv (l_serv) THEN   --also fetches the record
+        --  dbms_output.put_line(To_Char(l_idx) || '. service NOT found inside loop');
+        EXIT;
+     END IF;
+  END LOOP;
+  <<nothing_to_do_with_serv>>
+  null;
+end;
+
