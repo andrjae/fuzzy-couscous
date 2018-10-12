@@ -32,7 +32,7 @@ AND stpe.sety_ref_num IN (5802234) /*(SELECT DISTINCT prli.sety_ref_num sety_ref
                                                     AND sety.ref_num = ficv.sety_ref_num
                                                     AND NVL (sety.station_param, '*') NOT IN ('KER', 'ARVE', 'TEAV'))*/
 ), q5 as (
-select susg_ref_num, start_date, nvl(end_date, date '2018-08-31' + 1 - 1/24/60/60) end_date, rnk, last_status from (
+select susg_ref_num, start_date, end_date, rnk, last_status from (
 select susg_ref_num, start_date, end_date, status_code
 ,rank() over (partition by susg_ref_num order by start_date) rnk
 ,lag(status_code) over (partition by susg_ref_num order by start_date) last_status  
@@ -44,7 +44,7 @@ AND NVL (end_date, date '2018-08-01'+1) > date '2018-08-01'
 AND start_date < date '2018-08-31' + 1
 and status_code = 'AC'
 ), q6 as (
-select susg_ref_num, sety_ref_num, start_date, nvl(end_date, date '2018-08-31' + 1 - 1/24/60/60) end_date, sepa_ref_num, sepv_ref_num from subs_service_parameters susp
+select susg_ref_num, sety_ref_num, start_date, end_date, sepa_ref_num, sepv_ref_num from subs_service_parameters susp
 where  1=1
 AND NVL (susp.end_date, date '2018-08-01' + 1) > date '2018-08-01'
 AND susp.start_date < date '2018-08-31' + 1
@@ -97,34 +97,37 @@ union all
 select SEPT_TYPE_CODE, MIXED_PACKET_CODE, SETY_REF_NUM, SUSG_REF_NUM, START_DATE, END_DATE
 from qmix0
 ), qx AS (
-select /*+ LEADING(t) USE_HASH(t q4) NO_PARALLEL */ t.maac, t.susg, t.cat, t.sept_type_code, 
+select /* LEADING(t) USE_HASH(t q4) NO_PARALLEL */ t.maac, t.susg, t.cat, t.sept_type_code, 
 greatest(trunc(t.start_date), date '2018-08-01') supa_start, least(trunc(nvl(t.end_date, date '2018-08-31')) + 1 - 1/24/60/60, date '2018-08-31' + 1 - 1/24/60/60) supa_end,
 q4.sety_ref_num, 
 greatest(q4.start_date, date '2018-08-01') serv_start, least(nvl(q4.end_date, date '2018-08-31' + 1 - 1/24/60/60), date '2018-08-31' + 1 - 1/24/60/60) serv_end 
-from table(xx_aj.get_list_susg_x (date '2018-08-01', date '2018-08-31', 
-102,
+from table(xx_aj.get_list_susg_f (date '2018-08-01', date '2018-08-31', 
+--102,
 --13796675, 
 --14251850,
 --14606161,
 --15145486,
 --15369942,
-15824129 
---15814963,
---15814963,
+--15824129 
+15222851,
+15222851
+--15813374,
+--15813374
+--15806974,
+--15806974
+, null
 )) t JOIN q4 ON q4.susg_ref_num = t.susg
+where t.susg = 15222851
+--15813374
+--15806974
 )
-select * from (
-select /*+ USE_HASH(qx q6) */ qx.* , 
+select /* USE_HASH(qx q6) */ qx.* , 
 q6.sepa_ref_num, q6.sepv_ref_num, 
 greatest(q6.start_date, date '2018-08-01') sepv_start,  least(nvl(q6.end_date, date '2018-08-31' + 1 - 1/24/60/60), date '2018-08-31' + 1 - 1/24/60/60) sepv_end, 
 greatest(q5.start_date, date '2018-08-01') act_start,  least(nvl(q5.end_date, date '2018-08-31' + 1 - 1/24/60/60), date '2018-08-31' + 1 - 1/24/60/60) act_end, 
 q5.rnk, q5.last_status,
 ficv.charge_value ficv_charge_value, prli.charge_value prli_charge_value,
-q7.sept_type_code mipo_sept_type, q7.mixed_packet_code, q7.start_date mipo_start, q7.end_date mipo_end, 
-lead(q6.start_date) over (partition by qx.susg, q7.start_date, q5.start_date, qx.supa_start order by q6.start_date) next_sepv_start, 
-lead(q6.end_date) over (partition by qx.susg, q7.start_date, q5.start_date, qx.supa_start order by q6.start_date) next_sepv_end, 
-lag(q6.start_date) over (partition by qx.susg, q7.start_date, q5.start_date, qx.supa_start order by q6.start_date) prev_sepv_start, 
-lag(q6.end_date) over (partition by qx.susg, q7.start_date, q5.start_date, qx.supa_start order by q6.start_date) prev_sepv_end
+q7.*
 from qx      JOIN q5 ON q5.susg_ref_num = qx.susg
         LEFT JOIN q6 ON q6.susg_ref_num = qx.susg and q6.sety_ref_num = qx.sety_ref_num
         LEFT JOIN q7 ON q7.susg_ref_num = qx.susg
@@ -137,11 +140,9 @@ from qx      JOIN q5 ON q5.susg_ref_num = qx.susg
           select * from price_lists
           WHERE NVL (end_date, date '2018-08-01'+1) > date '2018-08-01'
           AND start_date < date '2018-08-31' + 1
-          ) prli ON prli.sety_ref_num = qx.sety_ref_num AND prli.package_category is null AND prli.fcty_type_code='RCH' AND prli.sepa_ref_num = q6.sepa_Ref_num and prli.sepv_ref_num = q6.sepv_ref_num 
-)
-where  sepv_end - sepv_start < 0.5
-and trunc(sepv_start) = trunc(prev_sepv_start)         
-order by maac, susg
+          ) prli ON prli.sety_ref_num = qx.sety_ref_num AND prli.package_category is null AND prli.fcty_type_code='RCH' AND prli.sepa_ref_num = q6.sepa_Ref_num and prli.sepv_ref_num = q6.sepv_ref_num
+--where  trunc(q6.start_date) = trunc(q6.end_date + 1/24/60/60)          
+order by qx.maac, qx.susg
 
 
 

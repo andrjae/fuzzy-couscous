@@ -1,4 +1,4 @@
-CREATE OR REPLACE PACKAGE XX_AJ AS
+CREATE OR REPLACE PACKAGE TBCIS.XX_AJ AS
 /******************************************************************************
    NAME:       XX_AJ
    PURPOSE:
@@ -22,6 +22,7 @@ function get_list_susg (p_start_date DATE, p_end_date DATE, p_min_susg NUMBER, p
 return t_susg_maac_tab pipelined;
 function get_list_susg_f (p_start_date DATE, p_end_date DATE, p_min_susg NUMBER, p_max_susg NUMBER, p_bicy VARCHAR2)
 return t_susg_maac_tab pipelined;
+function get_list_susg_x (p_start_date DATE, p_end_date DATE, p_min_susg NUMBER, p_max_susg NUMBER)
+return t_susg_maac_tab pipelined;
 END XX_AJ;
-
 /
