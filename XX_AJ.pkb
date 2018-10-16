@@ -135,26 +135,16 @@ where paca.end_date IS NULL
 AND sept.CATEGORY = paca.package_category
 AND paca.nety_type_code = NVL (sept.nety_type_code, 'GSM')
 AND paca.prepaid <> 'Y'
-), q2 as (
-select /*+ NO_INDEX(supa supa_uk2 supa supa_i2) */ supa.gsm_susg_ref_num susg, TRUNC (supa.suac_ref_num, -3) maac, q1.category, supa.start_date, supa.end_date, supa.sept_type_code 
-from subs_packages supa, q1
+)
+select /* FULL(supa)*/ supa.gsm_susg_ref_num susg, TRUNC (supa.suac_ref_num, -3) maac, q1.category, supa.start_date, supa.end_date, supa.sept_type_code
+from subs_packages supa JOIN q1 on supa.sept_type_code = q1.type_code 
 where 1=1
-AND q1.type_code = supa.sept_type_code
-), q3 as (
-select ref_num 
-from accounts where 1=1
-AND ref_num NOT IN (SELECT TO_NUMBER (value_code) AS large_maac_ref_num
+AND TRUNC (supa.suac_ref_num, -3) not IN (SELECT TO_NUMBER (value_code) AS large_maac_ref_num
                                                           FROM bcc_domain_values
                                                          WHERE doma_type_code = 'LAMA')
-)
-select /*+ USE_HASH(q2 q3)*/ 
-q2.susg, q2.maac, q2.category, q2.start_date, q2.end_date, q2.sept_type_code
-from q2, q3
-where 1=1
-AND NVL (q2.end_date, p_start_date) >= p_start_date
-AND q2.start_date <= p_end_date
-AND q2.susg between p_min_susg and p_max_susg
-and q2.maac = q3.ref_num
+AND NVL (supa.end_date, p_start_date) >= p_start_date
+AND supa.start_date <= p_end_date
+AND supa.gsm_susg_Ref_num between p_min_susg and p_max_susg
 ;
 TYPE t_acco_x_cur IS table OF c_acco_x%ROWTYPE;
 --l_acco_tab t_acco_cur;
