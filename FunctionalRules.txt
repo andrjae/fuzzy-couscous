@@ -1,0 +1,134 @@
+﻿RULES
+
+- Lisatakse uus tüüp DCH päevapõhiselt arvestatavatele teenustele. 
+  - Esimeses etapis rakendub see tüüp teenusele CHGGP (GPRS maksustamine).
+  - Hiljem võib tüüp DCH rakenduda ka teistele teenustele ,näit. MUKS (Kõned ja sõnumid)
+- Uus protseduur arvutab DCH tüüpi teenuste maksu etteantud perioodi (maksustamisperioodi) kohta,  arvestades mobiiliile rakenduvaid teenuse hindu päevase detailsusega.
+- Maksustamisperiood antakse protseduurile ette päevase detailsusega parameetritega alguspäev (kaasaarvatud) ja lõpppäev (kaasaarvatud)
+- Uus protseduur võib töödelda  vastavalt etteantud parameetrile:
+  - ühe masterkonto perioodi andmeid
+  - ühe billing cycle kontode perioodi andmeid
+  - kõigi kontode perioodi andmeid
+- Uus protseduur ei töötle "Large Master Accounts" masterkontosid (näit. kõnekaardid, kaugloetavad arvestid, jms. ) vt. CHG-3861
+- Uus protseduur ei töötle ettemaksuga teenuspakette,  (paca.prepaid='Y') näit. PRION kõnekaardid, või muud kõnekaardid   vt. CHG-662
+- Uus protseduur võib vastavat etteantud parameetrile muudatused andmebaasis lõpetada COMMITiga või mitte. Viimane variant on kasutatav testimiseks, et baasi muudatusi vaadata, aga mitte salvestada.
+- Päevapõhise hinna arvutamisel arvestatakse maksustamisperioodi jooksul kehtinud SUSGi andmeid tabelitest SUBS_PACKAGES, STATUS_PERIODS, SUBS_SERVICE_PARAMETERS, SSG_STATUSES,  FIXED_TERM_CONTRACTS, ...
+- Perioodide arvestamise üldreeglid
+  - R1 Perioodi algus on START_DATE (kaasaarvatud) ja lõpp END_DATE (kaasaarvatud)
+    - Kui END_DATE on NULL, siis on periood avatud ja sisaldab tänast kuupäeva
+  - R2  Kui algusaeg on väiksem lõpppajast, siis selline kirje on kehtetu ja seda ei arvestata
+  - R3 Periood võib olla esitatud erineva detailsusega 
+    - R3.1 Päevase detailsusega 
+      - R3.1.1 Kui R3.1 ja START_DATE või END_DATE sisaldavad kellaega, siis arvestatakse ainult kuupäeva
+    - R3.2 Sekundilise detailsusga
+      - R3.2.1 Arvestustes muudame andmete sekundilise detailsuse päevaseks detailsuseks. Selleks:
+        - alguspäevaks loetakse START_DATE ilma kellaajata 
+        - lõpppäevaks loetakse END_DATE ilma kellaajata juhul kui järgmine sama tüüpi periood ei alga samal päeval
+        - kui END_DATE on samal päeval järgmise sama tüüpi perioodi alguspäevaga, siis loetaks lõpppäevaks järgmise perioodi alguspäevale eelnenud päev
+        - selliste toimingute tulemusena võib perioodi lõpppäev saada väiksemaks algpäevaks - sellisel juhul vastavalt reeglile R2, jääb periood arvestamata. 
+  - R4 Maksustamisperioodi arvutusteks valitakse perioodid, mis täielikult või osaliselt kattuvad maksustamisperioodiga ja mis on korrigeeritud vastavalt maksustamisperioodi algus ja lõpuajale selliselt, et korrigeeritud periood ei jää väljapoole maksustamisperioodi.
+  - R5 Maksustamisperioodil arvestatakse ainult päevadega, mis kuuluvad samaaegselt mobiili teenuspaketi kehtivusperioodi, teenuse aktiivsesse perioodi ja mobiili aktiivsesse perioodi.  Kõik ülejäänud päevad ei kuulu arvestusse vaatamata muude võimalike parameetrite olekule.
+  - R6 Üheaegselt ei saa kehtida rohkem kui 1 sama tüüpi periood. See tähendab, et perioodi alguspäev peab olema hilisem kui sama tüüpi perioodi lõpppäev.  Juhul kui baasi andmetes esineb kattumine on tegemist veaolukorraga. 
+    - Veaolukorra lahendamiseks arvestatakse varasema algusega periood lõppenuks päeval enne järgmise perioodi algust. Juhul kui kattuvad perioodid algavad samal päeval, siis arvestatakse ainult viimati muudetud (date_updated) kirjet.
+- Perioodide arvutamise üldreeglid kohaldatakse nimetatud tabelitele järgnevalt. Kui reegli sõnastus on kohandatud , siis on see märgitud reegli nimetuse laiendusena (näit. R4_supa on sisult sama, aga sõnastuselt pisut erinev põhireeglist R4). Kui on unikaalne reegel, siis uus reegel algab tähtedega RX.
+- Tabel SUBS_PACKAGES
+  - Tabeli kirjed esitavad mobiili teenuspakettide kehtivusperioodide ajalooliste andmete hetkeseisu
+  - Mobiilil võib olla maksustamisperioodil 0 või enam teenuspaketi kehtivusperioodi.
+  - R1 - perioodi algus on START_DATE (kaasaarvatud) ja lõpp END_DATE (kaasaarvatud)
+    - Kui END_DATE on NULL, siis on periood avatud ja sisaldab tänast kuupäeva
+  - R2 - kui algusaeg on väiksem lõpppajast, siis selline kirje on kehtetu ja seda ei arvestata
+  - R3.1: Andmed on esitatud päevase detailsusega.
+  - R3.1.1: Kui START_DATE või END_DATE sisaldavad kellaega, siis arvestatakse ainult kuupäeva
+  - R4_supa: Maksustamisperioodi arvutusteks valitakse teenuspaketi kehtivusperioodid, mis täielikult või osaliselt kattuvad maksustamisperioodiga ja mis on korrigeeritud vastavalt maksustamisperioodi algus ja lõpuajale selliselt, et korrigeeritud periood ei jää väljapoole maksustamisperioodi.
+  - R5_supa: Maksustamisperioodil arvestatakse ainult päevadega, mis kuuluvad mobiili teenuspaketi kehtivusperioodi,  kõik ülejäänud päevad ei kuulu arvestusse vaatamata olemasoleva teenuse, mobiili või komplekti  kehtivusele.
+  - R6_supa: Üheaegselt ei saa mobiilil olla rohkem kui 1 kehtiv teenuspakett. See tähendab, et mobiili teenuspaketi kehtivusperioodi alguspäev peab olema hilisem kui sama mobiili eelmise kehtinud  teenuspaketi kehtivusperioodi lõpppäev.  Juhul kui baasi andmetes esineb kattumine on tegemist veaolukorraga. 
+    - Veaolukorra lahendamiseks arvestatakse varasema algusega periood lõppenuks päeval enne järgmise perioodi algust. Juhul kui kattuvad perioodid algavad samal päeval, siis arvestatakse ainult viimati muudetud (date_updated) kirjet.
+- Tabel STATUS_PERIODS
+  - Tabeli kirjed esitavad mobiili teenuste aktiivsusperioodide ajalooliste andmete hetkeseisu
+  - Mobiilil võib olla maksustamisperioodil 0 või enam teenust, millel igaühel võib olla 0 või enam aktiivsusperioodi
+  - R1- perioodi algus on START_DATE (kaasaarvatud) ja lõpp END_DATE (kaasaarvatud)
+    - Kui END_DATE on NULL, siis on periood avatud ja sisaldab tänast kuupäeva
+  - R2 - kui algusaeg on väiksem lõppajast, siis selline kirje on kehtetu ja seda ei arvestata 
+  - R3.2: Andmed on esitatud sekundilise detailsusega.
+  - R3.2.1_stpe: Arvestustes muudame andmete sekundilise detailsuse päevaseks detailsuseks. Selleks:
+    - alguspäevaks loetakse START_DATE ilma kellaajata 
+    - lõpppäevaks loetakse END_DATE ilma kellaajata juhul kui järgmine sama teenuse aktiivsusperiood ei alga samal päeval
+    - kui END_DATE on samal päeval järgmise sama teenuse aktiivsusperioodi alguspäevaga, siis loetaks lõpppäevaks järgmise perioodi alguspäevale eelnenud päev
+    - selliste toimingute tulemusena võib aktiivsusperioodi lõpppäev saada väiksemaks algpäevaks - sellisel juhul vastavalt reeglile R2, jääb periood arvestamata. 
+  - R4_stpe: Maksustamisperioodi arvutusteks valitakse teenuse aktiivsususperioodid, mis täielikult või osaliselt kattuvad maksustamisperioodiga ja mis on korrigeeritud vastavalt maksustamisperioodi algus ja lõpuajale selliselt, et korrigeeritud periood ei jää väljapoole maksustamisperioodi.
+  - R5_stpe: Maksustamisperioodil arvestatakse ainult päevadega, mis kuuluvad mobiili teenuse aktiivsusperioodi,  kõik ülejäänud päevad ei kuulu arvestusse vaatamata olemasoleva teenusepaketi, mobiili või komplekti  kehtivusele.
+  - R6_stpe: Üheaegselt ei saa mobiilil olla teenuse kohta rohkem kui 1 aktiivsusperiood. See tähendab, et mobiili teenuse aktiivsusperioodi alguspäev peab olema hilisem kui sama mobiili ja sama teenuse eelmise kehtinud  aktiivsusperioodi lõpppäev.  Juhul kui baasi andmetes esineb kattumine on tegemist veaolukorraga. 
+    - Veaolukorra lahendamiseks arvestatakse varasema algusega periood lõppenuks päeval enne järgmise perioodi algust. Juhul kui kattuvad perioodid algavad samal päeval, siis arvestatakse ainult viimati muudetud (date_updated) kirjet.
+- Tabel SUBS_SERVICE_PARAMETERS
+  - Tabeli kirjed esitavad mobiili teenuste parameetrite väärtuste kehtivusperioodide ajalooliste andmete hetkeseisu
+  - Mobiili kehtival teenusel võib olla teenuse aktiivsusperioodil 0 või enam parameetrit, millel igaühel võib olla 0 või enam kehtivsusperioodi
+  - R1 - perioodi algus on START_DATE (kaasaarvatud) ja lõpp END_DATE (kaasaarvatud)
+    - Kui END_DATE on NULL, siis on periood avatud ja sisaldab tänast kuupäeva
+  - R2 - kui algusaeg on väiksem lõppajast, siis selline kirje on kehtetu ja seda ei arvestata 
+  - R3.2: Andmed on esitatud sekundilise detailsusega.
+  - R3.2.1_susp: Arvestustes muudame andmete sekundilise detailsuse päevaseks detailsuseks. Selleks:
+    - alguspäevaks loetakse START_DATE ilma kellaajata 
+    - lõpppäevaks loetakse END_DATE ilma kellaajata juhul kui järgmine sama parameetri uue väärtuse kehtivusperiood ei alga samal päeval
+    - kui END_DATE on samal päeval järgmise sama parameetri uue väärtuse kehtivsusperioodi alguspäevaga, siis loetaks lõpppäevaks järgmise perioodi alguspäevale eelnenud päev
+    - selliste toimingute tulemusena võib aktiivsusperioodi lõpppäev saada väiksemaks algpäevaks - sellisel juhul vastavalt reeglile R0, jääb periood arvestamata.  See juhtub kui päeva jooksul muudetakse parameetri väärtust korduvalt, siis loetakse kehtivaks ainult viimasena seatud parameetri väärtus, vahepealsed väärtused jäävad arvestamata.
+  - R4_susp: Maksustamisperioodi arvutusteks valitakse parameetri kehtivusperioodid, mis täielikult või osaliselt kattuvad maksustamisperioodiga ja mis on korrigeeritud vastavalt maksustamisperioodi algus ja lõpuajale selliselt, et korrigeeritud periood ei jää väljapoole maksustamisperioodi.
+  - R5_susp: Kui teenuse parameetril on kehtivusaeg väljaspool selle teenuse aktiivsusaega, siis seda perioodi ei arvestata.
+  - R6_susp: Üheaegselt ei saa mobiilil/teenusel olla parameetri kohta rohkem kui 1 kehtivusperiood. See tähendab, et mobiili teenuse parameetri kehtivusperioodi alguspäev peab olema hilisem kui sama mobiili sama teenuse sama parameetri eelmise väärtuse kehtivusperioodi lõpppäev.  Juhul kui baasi andmetes esineb kattumine on tegemist veaolukorraga. 
+    - Veaolukorra lahendamiseks arvestatakse varasema algusega periood lõppenuks päeval enne järgmise perioodi algust. Juhul kui kattuvad perioodid algavad samal päeval, siis arvestatakse ainult viimati muudetud (date_updated) kirjet.
+- Tabel SSG_STATUSES
+  - Tabeli kirjed esitavad mobiili staatuste ajalooliste andmete hetkeseisu
+  - Staatus võib olla aktiivne - AC, piiratud - TC või  leping lõpetatud - CLN
+  - Mobiilil võib olla maksustamisperioodil 0 või enam aktiivset (AC) perioodi
+  - R1 - perioodi algus on START_DATE (kaasaarvatud) ja lõpp END_DATE (kaasaarvatud)
+    - Kui END_DATE on NULL, siis on periood avatud ja sisaldab tänast kuupäeva
+  - R2 - kui algusaeg on väiksem lõppajast, siis selline kirje on kehtetu ja seda ei arvestata 
+  - RX1: Aktiivne periood (AC) , mis jääb kahe piiratud (TC) perioodi vahele ja mille kestuseks on vähem kui 12 tundi loetakse kehtetuks ja jääb arvestusest välja
+  - R3.2: Andmed on esitatud sekundilise detailsusega.
+  - R3.2.1_ssgs: Arvestustes muudame andmete sekundilise detailsuse päevaseks detailsuseks. Selleks:
+    - alguspäevaks loetakse START_DATE ilma kellaajata 
+    - lõpppäevaks loetakse END_DATE ilma kellaajata juhul kui järgmine mobiili aktiivne periood ei alga samal päeval
+    - kui END_DATE on samal päeval järgmise aktiivse perioodi alguspäevaga, siis loetaks lõpppäevaks järgmise perioodi alguspäevale eelnenud päev
+    - selliste toimingute tulemusena võib aktiivsusperioodi lõpppäev saada väiksemaks algpäevaks - sellisel juhul vastavalt reeglile R0, jääb periood arvestamata. 
+  - R4_ssgs: Maksustamisperioodi arvutusteks valitakse aktiivse staatusega perioodid, mis täielikult või osaliselt kattuvad maksustamisperioodiga ja mis on korrigeeritud vastavalt maksustamisperioodi algus ja lõpuajale selliselt, et korrigeeritud periood ei jää väljapoole maksustamisperioodi.
+  - R5_ssgs: Maksustamisperioodil arvestatakse ainult päevadega, mis kuuluvad mobiili aktiivsesse perioodi,  kõik ülejäänud päevad ei kuulu arvestusse vaatamata olemasoleva teenusepaketi, teenuse või komplekti  kehtivusele.
+  - R6_ssgs: Üheaegselt ei saa mobiilil olla rohkem kui 1 aktiivne periood. See tähendab, et mobiili aktiivse perioodi alguspäev peab olema hilisem kui sama mobiilie elmise aktiivse perioodi lõpppäev.  Juhul kui baasi andmetes esineb kattumine on tegemist veaolukorraga. 
+    - Veaolukorra lahendamiseks arvestatakse varasema algusega periood lõppenuks päeval enne järgmise perioodi algust. Juhul kui kattuvad perioodid algavad samal päeval, siis arvestatakse ainult viimati muudetud (date_updated) kirjet.
+- Vastavalt tabelites SUBS_PACKAGES, STATUS_PERIODS, SUBS_SERVICE_PARAMETERS, SSG_STATUSES andmetest leitud perioodidele ja parameetritega antud maksustamisperioodile leitakse mobiili/teenuse perioodid , mille jooksul on mobiil ja teenus aktiivsed ja teenuspaketi ning teenuse parameetri kombinatsioon ei muutu. 
+  "select greatest(supa_start, stpe_start, susp_start, ssgs_start) starts, 
+  least(supa_start, stpe_start, susp_start, ssgs_start) ends
+  from tables
+  where (ssgs_start < supa_end AND ssgs_end > supa_start)  
+  and (susp_stars < supa_end AND susp_end > supa_start)
+  and (stpe_start < supa_end AND stpe_end > supa_start)
+  and (ssgs_start < susp_end AND ssgss_end > susp_start)  
+  and (ssgs_start < stpe_end AND ssgs_end > stpe_start)  
+  and (susp_start < stpe_end AND susp_end > stpe_start)  
+  
+  "
+- Tabel FIXED_TERM_CONTRACTS
+  - Tabeli kirjed esitavad mobiili kehtivate liitumislepingute ajalooliste andmete hetkeseisu
+  - Mobiilil võib olla maksustamisperioodil 0 või enam liitumislepingu kehtivusperioodi.
+  - R1 - perioodi algus on START_DATE (kaasaarvatud) ja lõpp END_DATE (kaasaarvatud)
+    - Kui END_DATE on NULL, siis on periood avatud ja sisaldab tänast kuupäeva
+  - R2 - kui algusaeg on väiksem lõpppajast, siis selline kirje on kehtetu ja seda ei arvestata
+  - R3.1: Andmed on esitatud päevase detailsusega.
+  - R.3.1.1: Kui START_DATE või END_DATE sisaldavad kellaega, siis arvestatakse ainult kuupäeva
+  - R4_ftco: Maksustamisperioodi arvutusteks valitakse liitumislepingute kehtivusperioodid, mis täielikult või osaliselt kattuvad maksustamisperioodiga ja mis on korrigeeritud vastavalt maksustamisperioodi algus ja lõpuajale selliselt, et korrigeeritud periood ei jää väljapoole maksustamisperioodi.
+  - R5 Maksustamisperioodil arvestatakse ainult päevadega, mis kuuluvad samaaegselt mobiili teenuspaketi kehtivusperioodi, teenuse aktiivsesse perioodi ja mobiili aktiivsesse perioodi.  Kõik ülejäänud päevad ei kuulu arvestusse vaatamata muude võimalike parameetrite olekule.
+  - R6_ftco: Üheaegselt ei saa mobiilil olla rohkem kui 1 kehtiv liitumisleping. See tähendab, et mobiili liitumislepingu kehtivusperioodi alguspäev peab olema hilisem kui sama mobiili eelmise kehtinud  liitumislepingu kehtivusperioodi lõpppäev.  Juhul kui baasi andmetes esineb kattumine on tegemist veaolukorraga. 
+    - Veaolukorra lahendamiseks arvestatakse varasema algusega periood lõppenuks päeval enne järgmise perioodi algust. Juhul kui kattuvad perioodid algavad samal päeval, siis arvestatakse ainult viimati muudetud (date_updated) kirjet.
+  - RX2: Liitumislepingutel millel algus või lõpupäev jääb maksustamisperioodi lisame täiendavalt "tühjad" lepiguta perioodid:
+    - enne esimest liitumislepingu kehtivusperioodi -  START_DATE on maksustamisperioodi algus ja END_DATE on päev enne esimese liitumislepingu kehtivuse algust
+    - pärast liitumislepingu kehtivuse lõppu - START_DATE on päev pärast liitumislepingu lõppemist ja END_DATE sõltuvalt kumb on varasem, kas päev enne järgmise lepingu algust või maksustamisperioodi lõpp.
+- Arvestatakse liitumislepinguid , milles tellitud teenus on sama, mis perioodis aktiivne olnud teenus ja mille teenuspakett on sama aktiivse teenuspaketiga.
+- Hetkel ei ole aktuaalne järgmine tingimus, aga on koodis arvestatud: Lisaks arvestatakse ka liitumislepinguid teenuspaketiga MinuEMT (special_mark='MEM',  nende DCH teenuste suhtes, mille atribuudid station_param = 'MINU'  ja station_type = 'TSV'. 
+- Liitumislepinguid ei arvestata vahearvetel
+- Vastavalt tabelites eelnevalt leitud perioodidele ja FIXED_TERM_CONTRACTS lepinguperioodidele ja lepinguta perioodidele leitakse mobiili/teenuse perioodid , mille jooksul on mobiil ja teenus aktiivsed ja teenuspaketi , teenuse parameetri ning PAK komplekti koodi kombinatsioon ei muutu. 
+- Eelnevalt leitud perioodide kohta rakenduvad maksustamise hinnad, mis leitakse  
+  - tabelist SUBS_SERV_FIXED_CHARGES SSFC  vastavalt mobiili SUSG_REF_NUM-ile (pole praegu GPRS maksustamisel kasutuses)
+  - kui SSFC tabelis pole hind määratud, siis tabelist FIXED_CHARGE_VALUES FICV vastavalt teenuse SETY_REF_NUM, SEPA_REF_NUM ja SEPV_REF_NUM perioodis kehtinud parameetritele ja teenuspaketi tüübile SEPT_TYPE
+    - FICV teenusetüüp, mis valitakse hinna määramisel peab olema defineeritud tabelis FIXED_CHARGED_ITEM_TYPES atribuutidega REGULAR_CHARGE='Y', ONCE_OFF='N', PRO_RATA='Y' 
+  - kui FICV tabelis pole hind määratud, siis tabelist PRICE_LISTS PRLI vastavalt teenuse SETY_REF_NUM, SEPA_REF_NUM ja SEPV_REF_NUM perioodis kehtinud parameetritele.  
+    - PRLI tabeli hind peab olema FCTY_TYPE='DCH' 
+    - kui PRLI tabelis vastavad mitu rida erineva PACKAGE_CATEGORY atribuudiga, siis valitakse vastavalt perioodis aktiivse teenuspaketi kategooria põhjal (hetkel pole aktuaalne, sest selliseid GPRS maksustamise hindu pole) 
+- Liitumislepinguga on määratud teenuse minimaalne kuutasu
