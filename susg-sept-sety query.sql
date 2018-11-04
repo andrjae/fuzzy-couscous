@@ -52,12 +52,12 @@ AND susp.start_date < date '2018-08-31' + 1
 ), qmix As (
 select SEPT_TYPE_CODE, MIXED_PACKET_CODE, ebs_order_number, SETY_REF_NUM, SUSG_REF_NUM, START_DATE, 
 case when trunc(end_date) >= trunc(next_start_date) then trunc(next_start_date)-1/24/60/60 else trunc(end_date)+1-1/24/60/60 end END_DATE, 
-NEXT_START_DATE, PREV_END_DATE, station_param, station_type, min_fix_monthly_fee, mipo_ref_num, mips_ref_num  
+NEXT_START_DATE, PREV_END_DATE, station_param, station_type, min_fix_monthly_fee, mipo_ref_num, mips_ref_num, monthly_disc_rate, monthly_markdown, monthly_billing_selector, monthly_fcit_type_code  
 from (
 select ftco.sept_type_code, ftco.mixed_packet_code, ftco.ebs_order_number, mose.sety_ref_num, ftco.susg_ref_num, ftco.start_date, ftco.end_date, 
 lead(ftco.start_date) over (partition by mose.sety_ref_num, ftco.susg_ref_num order by ftco.start_date, ftco.end_date) next_start_date,  
 lag(ftco.end_date) over (partition by mose.sety_ref_num, ftco.susg_ref_num order by ftco.end_date, ftco.start_date) prev_end_date, sety.station_param, sety.station_type,
-mose.min_fix_monthly_fee, mose.mipo_ref_num, mose.mips_ref_num
+mose.min_fix_monthly_fee, mose.mipo_ref_num, mose.mips_ref_num,  mips.monthly_disc_rate, mips.monthly_markdown, mipa.monthly_billing_selector, mipa.monthly_fcit_type_code
 from (
 select ftco.sept_type_code, ftco.mixed_packet_code, ftco.susg_ref_num, greatest(ftco.start_date, date '2018-08-01') start_date,
 least(coalesce(case when coalesce(ftco.date_closed, ftco.end_date)=trunc(coalesce(ftco.date_closed, ftco.end_date)) 
@@ -67,10 +67,14 @@ from fixed_term_contracts ftco
 ) ftco
 , mixed_packet_orders  mipo
 , mixed_order_services mose
+, mixed_packets mipa
+, mixed_packet_services mips
 , service_types sety
 where 1=1
 and mose.sety_ref_num = sety.ref_num
---   and mose.sety_ref_num = 5802234
+and ftco.mixed_packet_code = mipa.packet_code
+and mose.mips_ref_num = mips.ref_num
+   and mose.sety_ref_num = 5802234
 AND ftco.mixed_packet_code = mipo.mixed_packet_code
 AND ftco.ebs_order_number = mipo.ebs_order_number
 AND Nvl(mipo.term_request_type, '*') <> 'NULLIFY'
@@ -86,28 +90,33 @@ and end_date = date '2018-08-31'+1-1/24/60/60
 and start_date = date '2018-08-01'
 ), qmix1 AS (
 select sept_type_code, mixed_packet_code, ebs_order_number, sety_ref_num, susg_ref_num, start_date, end_date, coalesce(next_start_date, date '2018-08-31'+1) next_start_date, 
-coalesce(prev_end_date, date '2018-08-01') prev_end_date, station_param, station_type, min_fix_monthly_fee, mipo_ref_num, mips_ref_num
+coalesce(prev_end_date, date '2018-08-01') prev_end_date, station_param, station_type, min_fix_monthly_fee, mipo_ref_num, mips_ref_num--
+,  monthly_disc_rate, monthly_markdown, monthly_billing_selector, monthly_fcit_type_code
 from qmix
 where 1=1
 AND (end_date  < date '2018-08-31'+1-1/24/60/60
 OR start_date > date '2018-08-01')
 ), q7 as (
 select '' SEPT_TYPE_CODE, '' MIXED_PACKET_CODE, null ebs_order_number, SETY_REF_NUM, SUSG_REF_NUM, --prev_date, start_date, end_date, next_date 
-prev_end_date START_DATE, start_date -1/24/60/60 END_DATE , '' station_param, '' station_type, null min_fix_monthly_fee, null mipo_ref_num, null mips_ref_num
+prev_end_date START_DATE, start_date -1/24/60/60 END_DATE , '' station_param, '' station_type, null min_fix_monthly_fee, null mipo_ref_num, null mips_ref_num-- ,null monthly_disc_rate, null monthly_markdown
+,  null monthly_disc_rate, null monthly_markdown, null monthly_billing_selector, null monthly_fcit_type_code
 from qmix1
 where prev_end_date = date '2018-08-01'  --only month start not covered
 and start_date > date '2018-08-01'
 and start_date < end_date
 union all
 select '' SEPT_TYPE_CODE, '' MIXED_PACKET_CODE, null ebs_order_number, SETY_REF_NUM, SUSG_REF_NUM, --prev_date, start_date, end_date, next_date --
-end_date+1/24/60/60 START_DATE, next_start_date -1/24/60/60 END_DATE, '' station_param, '' station_type, null min_fix_monthly_fee, null mipo_ref_num, null mips_ref_num 
+end_date+1/24/60/60 START_DATE, next_start_date -1/24/60/60 END_DATE, '' station_param, '' station_type, null min_fix_monthly_fee, null mipo_ref_num, null mips_ref_num--, null monthly_disc_rate, null monthly_markdown 
+, null monthly_disc_rate, null monthly_markdown, null monthly_billing_selector, null monthly_fcit_type_code
 from qmix1 
 where next_start_date > end_date+1/24/60/60
 union all
-select SEPT_TYPE_CODE, MIXED_PACKET_CODE, ebs_order_number, SETY_REF_NUM, SUSG_REF_NUM, START_DATE, END_DATE, station_param, station_type, min_fix_monthly_fee, mipo_ref_num, mips_ref_num
+select SEPT_TYPE_CODE, MIXED_PACKET_CODE, ebs_order_number, SETY_REF_NUM, SUSG_REF_NUM, START_DATE, END_DATE, station_param, station_type, min_fix_monthly_fee, mipo_ref_num, mips_ref_num--,  monthly_disc_rate, monthly_markdown
+,  monthly_disc_rate, monthly_markdown, monthly_billing_selector, monthly_fcit_type_code
 from qmix1
 union all
-select SEPT_TYPE_CODE, MIXED_PACKET_CODE, ebs_order_number, SETY_REF_NUM, SUSG_REF_NUM, START_DATE, END_DATE, station_param, station_type, min_fix_monthly_fee, mipo_ref_num, mips_ref_num
+select SEPT_TYPE_CODE, MIXED_PACKET_CODE, ebs_order_number, SETY_REF_NUM, SUSG_REF_NUM, START_DATE, END_DATE, station_param, station_type, min_fix_monthly_fee, mipo_ref_num, mips_ref_num--,  monthly_disc_rate, monthly_markdown
+,  monthly_disc_rate, monthly_markdown, monthly_billing_selector, monthly_fcit_type_code
 from qmix0
 ), qx AS (
 select /* CARDINALITY (t 2000000) NO_PARALLEL */ /*+ LEADING(t) USE_HASH(t q4) NO_PARALLEL */ t.maac, t.susg, t.cat, t.sept_type_code, 
@@ -147,7 +156,8 @@ ficv.fcit_charge_parameter, ficv.fcit_first_prorated_charge, ficv.fcit_last_pror
 prli.package_category prli_package_category,  
 row_number() over (partition by qx.susg, qx.sept_type_code, qx.sety_ref_num, q6.sepa_ref_num, q6.sepv_ref_num, q7.mixed_packet_code order by prli.package_category nulls last) rp,
 q7.sept_type_code mipo_sept_type, q7.mixed_packet_code, q7.ebs_order_number, q7.start_date mipo_start, q7.end_date mipo_end, q7.sety_ref_num mose_sety_ref_num,
-q7.station_param, q7.station_type , q7.min_fix_monthly_fee, q7.mipo_ref_num, q7.mips_ref_num, mips.monthly_disc_rate, mips.monthly_markdown, 
+q7.station_param, q7.station_type , q7.min_fix_monthly_fee, q7.mipo_ref_num, q7.mips_ref_num, q7.monthly_disc_rate, q7.monthly_markdown, q7.monthly_billing_selector
+, q7.monthly_fcit_type_code,
 lead(q6.start_date) over (partition by qx.susg, qx.sety_ref_num, q6.sepa_ref_num, q7.start_date, q5.start_date, qx.serv_start, qx.supa_start order by q6.start_date) + 0.125 next_sepv_start, 
 lead(qx.serv_start) over (partition by qx.susg, qx.sety_ref_num, q6.sepa_ref_num, q7.start_date, q6.start_date, q5.start_date, qx.supa_start order by qx.serv_start) next_serv_start, 
 lead(q5.start_date) over (partition by qx.susg, qx.sety_ref_num, q6.sepa_ref_num, q7.start_date, q6.start_date, qx.serv_start, qx.supa_start order by q5.start_date) + 0.125 next_act_start 
@@ -157,7 +167,6 @@ lead(q5.start_date) over (partition by qx.susg, qx.sety_ref_num, q6.sepa_ref_num
 from qx      JOIN q5 ON q5.susg_ref_num = qx.susg
         LEFT JOIN q6 ON q6.susg_ref_num = qx.susg and q6.sety_ref_num = qx.sety_ref_num
         LEFT JOIN q7 ON q7.susg_ref_num = qx.susg and q7.sept_type_code = qx.sept_type_code
-        LEFT JOIN mixed_packet_services mips ON mips.REF_NUM = q7.mips_ref_num
         LEFT JOIN (
           select ficv.*, fcit.description fcit_desc, fcit.type_code fcit_type_code, fcit.taty_type_code fcit_taty_type_code, fcit.billing_selector fcit_billing_selector, 
           fcit.valid_charge_parameter  fcit_charge_parameter, fcit.first_prorated_charge fcit_first_prorated_charge, fcit.last_prorated_charge fcit_last_prorated_charge,
