@@ -1,8 +1,10 @@
-﻿--create table AJ_TEMP_1 AS 
+﻿drop table AJ_TEMP_1 PURGE
+
+create table AJ_TEMP_1 AS 
 with q4 as (
 select susg_ref_num, sety_ref_num, start_date, end_date , count(*) over (partition by susg_ref_num, sety_ref_num) c
 from status_periods stpe
-where 1=1--susg_ref_num =15790516
+where 1=1 --susg_ref_num =6177509
 AND NVL (stpe.end_date, date '2018-09-01' + 1) > date '2018-09-01'
 AND stpe.start_date < date '2018-09-30' + 1
 AND stpe.sety_ref_num IN (SELECT DISTINCT prli.sety_ref_num sety_ref_num
@@ -152,12 +154,13 @@ q6.sepa_ref_num, q6.sepv_ref_num,
 greatest(q6.start_date + 0.125, date '2018-09-01') sepv_start,  least(nvl(q6.end_date + 0.125, date '2018-09-30' + 1 - 1/24/60/60), date '2018-09-30' + 1 - 1/24/60/60) sepv_end, 
 greatest(q5.start_date + 0.125, date '2018-09-01') act_start,  least(nvl(q5.end_date + 0.125, date '2018-09-30' + 1 - 1/24/60/60), date '2018-09-30' + 1 - 1/24/60/60) act_end, 
 q5.rnk, q5.last_status,
-ficv.charge_value ficv_charge_value, prli.charge_value prli_charge_value, ficv.fcit_desc, fcit.description fcit_desc2, ficv.fcit_type_code, fcit.type_code fcit_type_code2,
-ficv.fcit_taty_type_code, fcit.taty_type_code fcit_taty_type_code2, ficv.fcit_billing_selector, fcit.billing_selector fcit_billing_selector2, ficv.fcit_charge_parameter, 
-fcit.valid_charge_parameter fcit_charge_parameter2, ficv.fcit_first_prorated_charge, fcit.first_prorated_charge fcit_first_prorated_charge2, ficv.fcit_last_prorated_charge, 
-fcit.last_prorated_charge fcit_last_prorated_charge2, ficv.fcit_sety_first_prorated, fcit.sety_first_prorated fcit_sety_first_prorated2, ficv.fcit_regular_charge, 
-fcit.regular_charge fcit_regular_charge2, ficv.fcit_once_off, fcit.once_off fcit_once_off2,  ficv.fcit_pro_rata, fcit.pro_rata fcit_pro_rata2,
-ficv.fcit_package_category, fcit.package_category fcit_package_category2, prli.package_category prli_package_category,  
+ficv.charge_value ficv_charge_value, prli.charge_value prli_charge_value,  
+nvl(ficv.fcit_desc, fcit.description) fcit_desc, nvl(ficv.fcit_type_code, fcit.type_code) fcit_type_code, nvl(ficv.fcit_taty_type_code, fcit.taty_type_code) fcit_taty_type_code, 
+nvl(ficv.fcit_billing_selector, fcit.billing_selector) fcit_billing_selector, nvl(ficv.fcit_charge_parameter, fcit.valid_charge_parameter) fcit_charge_parameter, 
+nvl(ficv.fcit_first_prorated_charge, fcit.first_prorated_charge) fcit_first_prorated_charge, nvl(ficv.fcit_last_prorated_charge, fcit.last_prorated_charge) fcit_last_prorated_charge, 
+nvl(ficv.fcit_sety_first_prorated, fcit.sety_first_prorated) fcit_sety_first_prorated, nvl(ficv.fcit_regular_charge, fcit.regular_charge) fcit_regular_charge, 
+nvl(ficv.fcit_once_off, fcit.once_off) fcit_once_off,  nvl(ficv.fcit_pro_rata, fcit.pro_rata) fcit_pro_rata, nvl(ficv.fcit_package_category, fcit.package_category) fcit_package_category, 
+nvl(ficv.fcit_fcdt_type_code, fcit.fcdt_type_code) fcit_fcdt_type_code, prli.package_category prli_package_category, 
 row_number() over (partition by qx.susg, qx.sept_type_code, qx.sety_ref_num, q6.sepa_ref_num, q6.sepv_ref_num, q7.mixed_packet_code order by prli.package_category nulls last) rp,
 q7.sept_type_code mipo_sept_type, q7.mixed_packet_code, q7.ebs_order_number, q7.start_date mipo_start, q7.end_date mipo_end, q7.sety_ref_num mose_sety_ref_num,
 q7.station_param, q7.station_type , q7.min_fix_monthly_fee, q7.mipo_ref_num, q7.mips_ref_num, q7.monthly_disc_rate, q7.monthly_markdown, q7.monthly_billing_selector
@@ -170,11 +173,12 @@ lead(q5.start_date) over (partition by qx.susg, qx.sety_ref_num, q6.sepa_ref_num
 --lag(q6.end_date) over (partition by qx.susg, qx.sety_ref_num, q6.sepa_ref_num, q7.start_date, q5.start_date, qx.supa_start order by q6.start_date) prev_sepv_end
 from qx      JOIN q5 ON q5.susg_ref_num = qx.susg
         LEFT JOIN q6 ON q6.susg_ref_num = qx.susg and q6.sety_ref_num = qx.sety_ref_num
-        LEFT JOIN q7 ON q7.susg_ref_num = qx.susg and q7.sept_type_code = qx.sept_type_code
+        LEFT JOIN q7 ON q7.susg_ref_num = qx.susg and q7.sety_ref_num = qx.sety_ref_num and nvl(q7.sept_type_code, qx.sept_type_code) = qx.sept_type_code 
         LEFT JOIN (
           select ficv.*, fcit.description fcit_desc, fcit.type_code fcit_type_code, fcit.taty_type_code fcit_taty_type_code, fcit.billing_selector fcit_billing_selector, 
           fcit.valid_charge_parameter  fcit_charge_parameter, fcit.first_prorated_charge fcit_first_prorated_charge, fcit.last_prorated_charge fcit_last_prorated_charge,
-          fcit.sety_first_prorated fcit_sety_first_prorated, fcit.regular_charge fcit_regular_charge, fcit.once_off fcit_once_off, fcit.pro_rata fcit_pro_rata, fcit.package_category fcit_package_category
+          fcit.sety_first_prorated fcit_sety_first_prorated, fcit.regular_charge fcit_regular_charge, fcit.once_off fcit_once_off, fcit.pro_rata fcit_pro_rata, 
+          fcit.package_category fcit_package_category, fcit.fcdt_type_code fcit_fcdt_type_code
           from fixed_charge_values ficv, fixed_charge_item_types fcit
           WHERE NVL (ficv.end_date, date '2018-09-01'+1) > date '2018-09-01'
           AND ficv.start_date < date '2018-09-30' + 1
