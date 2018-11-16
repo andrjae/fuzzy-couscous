@@ -90,10 +90,40 @@ join subs_discounts sudi ON sudi.susg_ref_num = t.susg AND sudi.cadc_ref_num IS 
                                                                              and padd.cadc_ref_num = cadc.ref_num) ))
 RIGHT JOIN aj_temp_1 t1 ON t1.susg = t.susg and t1.starts = t.starts  and t1.sety_ref_num = t.sety_ref_num   
 where 1=1
-and t1.susg = 6177509      
+--and t1.susg = 6177509      
 and t1.sety_ref_num = 5802234
---and cadc.ref_num is not null                                     
+and cadc.ref_num is not null                                     
 order by 4 desc ,1 desc, t1.maac, t1.susg, t1.starts
+
+with q1 as (
+select cadc.*, sudi.ref_num sudi_ref_num, sudi.susg_ref_num, sudi.padi_ref_num, sudi.start_date sudi_start_date, sudi.end_date sudi_end_date from (
+select * from  call_discount_codes cadc where cadc.call_type = 'REGU'
+                                     and date '2018-09-30' BETWEEN cadc.start_date AND NVL (cadc.end_date, date '2018-09-30') and NVL (cadc.discount_completed, 'N') <> 'Y'
+                                     and exists (select 1 from subs_discounts sudix 
+                                                 where sudix.dico_ref_num = cadc.dico_ref_num 
+                                                 and sudix.cadc_ref_num is null)
+) cadc
+join subs_discounts sudi ON sudi.cadc_ref_num IS NULL AND NVL (sudi.closed, 'N') <> 'Y'  and cadc.dico_ref_num = sudi.dico_ref_num   
+                            AND nvl(SUDI.end_date,date '2018-09-30') >= date '2018-09-30' 
+                            AND sudi.start_date + NVL (cadc.from_day, 0) <= date '2018-09-30'
+                            AND ( NVL(sudi.end_date,ADD_MONTHS (sudi.start_date, NVL (cadc.count_for_months, 0))
+                                  + NVL (cadc.count_for_days, 0)) >= date '2018-09-30'
+                               OR (cadc.count_for_days IS NULL AND cadc.count_for_months IS NULL)
+                              )
+                            and (sudi.padi_ref_num is null OR (sudi.padi_ref_num is not null AND exists (select 1 from part_dico_details padd 
+                                                                             where PADD.PADI_REF_NUM = sudi.padi_ref_num
+                                                                             and padd.cadc_ref_num = cadc.ref_num) ))
+)
+select t.* 
+from aj_temp_1 t left join q1 on q1.susg_ref_num = t.susg and q1.for_fcit_type_code = t.fcit_type_code and q1.for_billing_selector = t.fcit_billing_selector
+and nvl(q1.for_sepv_ref_num, t.sepv_ref_num) = t.sepv_ref_num
+
+
+
+
+
+select * from disc_call_amounts
+where susg_ref_num=6177509
 
 15777236
 6177509
