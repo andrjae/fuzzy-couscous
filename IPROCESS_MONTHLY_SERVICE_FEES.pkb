@@ -4241,8 +4241,9 @@ CREATE OR REPLACE PACKAGE BODY TBCIS.iPROCESS_MONTHLY_SERVICE_FEES AS
                  ,'N'  prorata            -- CHG-5762
              FROM subs_packages supa, status_periods stpe, serv_package_types sept, package_categories paca
             WHERE NVL (supa.end_date, p_period_start) >= p_period_start
-              AND (p_maac_ref_num IS NULL OR TRUNC (supa.suac_ref_num, -3) = p_maac_ref_num
-                  )   -- CHG-3908: For testing with one MAAC
+              --AND (p_maac_ref_num IS NULL OR TRUNC (supa.suac_ref_num, -3) = p_maac_ref_num
+                --  )   -- CHG-3908: For testing with one MAAC
+                and supa.gsm_susg_ref_num = p_maac_ref_num
               AND (p_bill_cycle IS NULL OR                                                                              -- CHG-4482
                    p_bill_cycle = (select bicy_cycle_code from accounts where ref_num = TRUNC (supa.suac_ref_num, -3))  -- CHG-4482
                   )

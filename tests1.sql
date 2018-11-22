@@ -1,4 +1,11 @@
+select * from fixed_charge_item_types
+
 iprocess_monthly_service_fees
+
+calculate_fixed_charges
+
+calculate_discounts
+
 
 proc_mobile_nonker_serv_fees
 
@@ -35,65 +42,7 @@ select * from aj_temp_1 t
 where t.susg =13710290
 
 
-select * from (
 
-select /*+ MONITOR  ALL_ROWS*/
-t.*, --row_number() over (partition by t.susg order by sudi.ref_num nulls last) cnt, 
-cadc.REF_NUM cadc_ref_num, cadc.DISCOUNT_CODE cadc_discount_code, START_BILL_PERIOD, NEXT_BILL_PERIOD, SEC_AMOUNT, CALL_TYPE, cadc.FCIT_TYPE_CODE cadc_fcit_type_code, BILLING_SELECTOR, 
-DISCOUNT_COMPLETED, cadc.DATE_CREATED cadc_date_created, cadc.CREATED_BY cadc_reated_by, cadc.DATE_UPDATED cadc_date_updated, cadc.LAST_UPDATED_BY cadc_last_updated_by, 
-cadc.SEPT_TYPE_CODE cadc_sept_type_code, END_BILL_PERIOD, SUBS_DISCOUNT_CODE, NEW_MOBILE, DURATION, SUMMARY_DISCOUNT, PRECENTAGE, cadc.DICO_REF_NUM cadc_dico_ref_num, DESCRIPTION, 
-TATY_TYPE_CODE, cadc.START_DATE cadc_start_date, cadc.END_DATE cadc_end_date, PRIORITY, COUNT_FOR_MONTHS, COUNT_FOR_DAYS, FROM_DAY, FOR_DAY_CLASS, FOR_CHAR_ANAL_CODE, FOR_BILLING_SELECTOR, 
-FOR_FCIT_TYPE_CODE, FOR_SETY_REF_NUM, FOR_SEPV_REF_NUM, DISC_BILLING_SELECTOR, PRINT_REQUIRED, CRM, COUNT, TIME_BAND_START, TIME_BAND_END, SEC_MONTHLY_AMOUNT, CHG_DURATION, PERIOD_SEK, 
-SEC_MINIMUM_PRICE, SINGLE_COUNT, DECREASE, PRICING, CHCA_TYPE_CODE, BILL_SEL_SUM, FROM_COUNT, MIN_PRICE_UNIT, SEC_CONTROL_AMOUNT, SEC_INVO_AMOUNT, SEC_INVE_AMOUNT, 
-cadc.SEC_CURR_CODE cadc_sec_curr_code, AMOUNT, CONTROL_AMOUNT, cadc.CURR_CODE cadc_curr_code, INVE_AMOUNT, INVO_AMOUNT, MINIMUM_PRICE, MONTHLY_AMOUNT, CALC, MIXED_SERVICE
---,sudi.REF_NUM sudi_REF_NUM, sudi.SUSG_REF_NUM sudi_susg_ref_num, sudi.DISCOUNT_CODE sudi_DISCOUNT_CODE, CONNECTION_EXIST, sudi.SUDI_REF_NUM sudi_sudi_ref_num, CLOSED, 
---REASON_CODE, sudi.DATE_CREATED sudi_DATE_CREATED, sudi.CREATED_BY sudi_CREATED_BY, sudi.DATE_UPDATED sudi_DATE_UPDATED, sudi.LAST_UPDATED_BY sudi_last_updated_by, DOC_TYPE, 
---DOC_NUM, sudi.START_DATE sudi_start_date, sudi.END_DATE sudi_end_date, sudi.CADC_REF_NUM sudi_cadc_ref_num, sudi.DICO_REF_NUM sudi_dico_ref_num, SEC_AMT, DICO_SUDI_REF_NUM, 
---sudi.SEC_CURR_CODE sudi_sec_curr_code, EEK_AMT, sudi.CURR_CODE sudi_curr_code, sudi.MIXED_PACKET_CODE sudi_mixed_packet_code, PADI_REF_NUM, USRE_REF_NUM, CAOF_REF_NUM
-from aj_temp_1 t
- JOIN call_discount_codes cadc ON cadc.for_fcit_type_code = t.fcit_type_code and cadc.for_billing_selector = t.fcit_billing_selector and cadc.call_type = 'REGU'
-                                     and date '2018-09-30' BETWEEN cadc.start_date AND NVL (cadc.end_date, date '2018-09-30') and NVL (cadc.discount_completed, 'N') <> 'Y'
-                                     and nvl(cadc.for_sepv_ref_num, t.sepv_ref_num) = t.sepv_ref_num 
-                                     and exists (select 1 from subs_discounts sudix 
-                                                 where sudix.dico_ref_num = cadc.dico_ref_num 
-                                                 and sudix.cadc_ref_num is null
-                                                 and sudix.susg_ref_num = t.susg)
-
-left join subs_discounts sudi ON sudi.susg_ref_num = t.susg AND sudi.cadc_ref_num IS NULL AND NVL (sudi.closed, 'N') <> 'Y'  and cadc.dico_ref_num = sudi.dico_ref_num
-where 1=1
---and t.susg=15823780
-and (sudi.padi_ref_num is null OR (sudi.padi_ref_num is not null AND exists (select 1 from part_dico_details padd 
-                                                                             where PADD.PADI_REF_NUM = sudi.padi_ref_num
-                                                                             and padd.cadc_ref_num = cadc.ref_num) ))
-
-with t as (
-select susg, starts, ends, fcit_type_code, fcit_billing_selector, sepv_ref_num, sept_type_code, mixed_packet_code, sety_ref_num
-from aj_temp_1
-)
-select count(*) over (partition by t1.susg, t1.starts, t1.sety_ref_num) cc, t1.*, cadc.*, sudi.* from t
- JOIN call_discount_codes cadc ON cadc.for_fcit_type_code = t.fcit_type_code and cadc.for_billing_selector = t.fcit_billing_selector and cadc.call_type = 'REGU'
-                                     and date '2018-09-30' BETWEEN cadc.start_date AND NVL (cadc.end_date, date '2018-09-30') and NVL (cadc.discount_completed, 'N') <> 'Y'
-                                     and nvl(cadc.for_sepv_ref_num, t.sepv_ref_num) = t.sepv_ref_num 
-                                     and exists (select 1 from subs_discounts sudix 
-                                                 where sudix.dico_ref_num = cadc.dico_ref_num 
-                                                 and sudix.cadc_ref_num is null
-                                                 and sudix.susg_ref_num = t.susg)
-join subs_discounts sudi ON sudi.susg_ref_num = t.susg AND sudi.cadc_ref_num IS NULL AND NVL (sudi.closed, 'N') <> 'Y'  and cadc.dico_ref_num = sudi.dico_ref_num   
-                            AND nvl(SUDI.end_date,date '2018-09-30') >= date '2018-09-30' 
-                            AND sudi.start_date + NVL (cadc.from_day, 0) <= date '2018-09-30'
-                            AND ( NVL(sudi.end_date,ADD_MONTHS (sudi.start_date, NVL (cadc.count_for_months, 0))
-                                  + NVL (cadc.count_for_days, 0)) >= date '2018-09-30'
-                               OR (cadc.count_for_days IS NULL AND cadc.count_for_months IS NULL)
-                              )
-                            and (sudi.padi_ref_num is null OR (sudi.padi_ref_num is not null AND exists (select 1 from part_dico_details padd 
-                                                                             where PADD.PADI_REF_NUM = sudi.padi_ref_num
-                                                                             and padd.cadc_ref_num = cadc.ref_num) ))
-RIGHT JOIN aj_temp_1 t1 ON t1.susg = t.susg and t1.starts = t.starts  and t1.sety_ref_num = t.sety_ref_num   
-where 1=1
---and t1.susg = 6177509      
-and t1.sety_ref_num = 5802234
-and cadc.ref_num is not null                                     
-order by 4 desc ,1 desc, t1.maac, t1.susg, t1.starts
 
 select greatest(sudi.start_date, cadc.start_date, p_start_date) disc_start,  
 least(sudi.end_date, cadc.end_date, ADD_MONTHS(sudi_start_date, NVL(cadc.count_for_months,0))+NVL(cadc.count_for_days)  p_start_date) disc_end, *
@@ -119,8 +68,8 @@ left join part_dico_details padd ON PADD.PADI_REF_NUM = sudi.padi_ref_num
                                                    and padd.cadc_ref_num = cadc.ref_num
 
 with q1 as (
-select greatest(sudi.start_date, cadc.start_date, date '2018-10-01') disc_start
-,least(nvl(sudi.end_date, date '2018-10-31'), nvl(cadc.end_date, date '2018-10-31'), ADD_MONTHS(sudi.start_date, NVL(cadc.count_for_months,0))+NVL(cadc.count_for_days,0),  date '2018-10-31') disc_end
+select greatest(sudi.start_date, cadc.start_date, :p_start_date) disc_start
+,least(nvl(sudi.end_date, :p_end_date), nvl(cadc.end_date, :p_end_date), ADD_MONTHS(sudi.start_date, NVL(cadc.count_for_months,0))+NVL(cadc.count_for_days,0),  :p_end_date) disc_end
 ,cadc.*,
 sudi.REF_NUM sudi_ref_num0, SUSG_REF_NUM, sudi.DISCOUNT_CODE sudi_discount_code, CONNECTION_EXIST, SUDI_REF_NUM, CLOSED, REASON_CODE, sudi.DATE_CREATED sudi_date_created, 
 sudi.CREATED_BY sudi_created_by, sudi.DATE_UPDATED sudi_date_updated, sudi.LAST_UPDATED_BY sudi_last_update_by, DOC_TYPE, DOC_NUM, sudi.START_DATE sudi_start_date, sudi.END_DATE sudi_end_date, 
@@ -129,15 +78,15 @@ sudi.PADI_REF_NUM, USRE_REF_NUM, CAOF_REF_NUM, padi.PADI_REF_NUM padi_padi_ref_n
 DISC_PERCENTAGE, DISC_ABSOLUTE, PRICE, padi.CREATED_BY padi_created_by, padi.DATE_CREATED padi_date_created, padi.LAST_UPDATED_BY padi_last_updated_by, padi.DATE_UPDATED padi_date_updated
 from (
 select * from  call_discount_codes cadc where cadc.call_type = 'REGU'
-                                     and NVL (cadc.end_date, date '2018-10-01') >= date '2018-10-01'
-                                     and cadc.start_date < date '2018-10-31' + 1
+                                     and NVL (cadc.end_date, :p_start_date) >= :p_start_date
+                                     and cadc.start_date < :p_end_date + 1
                                      and NVL (cadc.discount_completed, 'N') <> 'Y'
 ) cadc
 join subs_discounts sudi ON sudi.cadc_ref_num IS NULL AND NVL (sudi.closed, 'N') <> 'Y'  and cadc.dico_ref_num = sudi.dico_ref_num   
-                                              and NVL (sudi.end_date, date '2018-10-01') >= date '2018-10-01'
-                                              and sudi.start_date < date '2018-10-31' + 1
+                                              and NVL (sudi.end_date, :p_start_date) >= :p_start_date
+                                              and sudi.start_date < :p_end_date + 1
                             AND NVL(sudi.end_date,ADD_MONTHS (sudi.start_date, NVL (cadc.count_for_months, 0))
-                                  + NVL (cadc.count_for_days, 0)) >= date '2018-10-01'
+                                  + NVL (cadc.count_for_days, 0)) >= :p_start_date
                             and (sudi.padi_ref_num is null OR (sudi.padi_ref_num is not null AND exists (select 1 from part_dico_details padd 
                                                                              where PADD.PADI_REF_NUM = sudi.padi_ref_num
                                                                              and padd.cadc_ref_num = cadc.ref_num) ))
@@ -187,6 +136,11 @@ select * from subs_serv_groups
 select * from disc_call_amounts
 where susg_ref_num=6177509
 
+62.24  21.65
+
+select * from mixed_product_bill_periods
+where susg_ref_num = 14946136
+
 15777236
 6177509
 
@@ -207,17 +161,73 @@ where ref_num=69567216
 delete from invoice_entries
 where ref_num in (939575406, 939575407);
 
+
+select * from invoice_entries
+where 1=1
+and susg_ref_num = 14946136
+and billing_selector = 'KTO'
+UNION ALL
+select * from invoice_entries AS of timestamp sysdate-1/24
+where 1=1
+and susg_ref_num = 14946136
+and billing_selector = 'KTO'
+order by 7
+
+insert into invoice_entries
+select * from invoice_entries as of timestamp sysdate-3/24
+where ref_num in (945339626
+)
+
+process_mixed_packet_fees
+
+main_monthly_batch
+
+calculate_fixed_charges
+
+main_monthly_charges
+
+select * from all_source
+where text like '%1473%'
+
+select * from all_source
+where lower(text) like '%start_mixed_product_fees%'
+
 select rowid, ie.* from invoice_entries ie
 where 1=1
 --and susg_ref_num = 13647015
 --and susg_ref_num = 15399650
 --and invo_ref_num = 69141549
-and susg_ref_num = 14946136 
+and susg_ref_num = 14946136
 --and susg_ref_num=11773459
 --and invo_ref_num=69064841
 --and susg_ref_num = 41902
 --and invo_ref_num = 68721868
 order by billing_selector, date_created
+
+select * from invoice_entries_interim
+
+
+delete from invoice_entries
+where ref_num = 945339626
+
+insert into invoice_entries
+select * from invoice_entries as of timestamp sysdate-2/24
+where ref_num = 945339626
+
+select * from service_types
+order by ref_num
+
+select rowid, t.* from common_monthly_charges t
+where 1=1
+and susg_ref_num = 14946136
+
+insert into common_monthly_charges
+select * from common_monthly_charges as of timestamp sysdate-2/24
+where ref_num in (945339625
+)
+
+delete from common_monthly_charges
+where ref_num in (945339625)
 
 
 20 21.65  Mix
@@ -242,10 +252,10 @@ delete from subs_discounts
 where  ref_num = 38706111
 
 select * from subs_discounts
-where ref_num in ( 37651810, 37651811)
+where ref_num in ( 37411138)
 union all
 select * from subs_discounts AS OF TIMESTAMP sysdate -2/24
-where ref_num in ( 37651810, 37651811)
+where ref_num in ( 37411138)
 
 select * from discount_codes
 where ref_num = 18942
@@ -270,6 +280,9 @@ insert into subs_discounts
 select * from subs_discounts  AS OF timestamp sysdate-2/24
 where 1=1 
 and ref_num = 38706111
+
+select rowid, t.* from subs_discounts t 
+where susg_ref_num = 14946136
 
 select count(*) over (partition by susg_ref_num) c, d.* from subs_discounts d
 where date_created between timestamp '2018-10-01 01:00:00'  and timestamp '2018-10-01 02:00:00'
@@ -303,9 +316,6 @@ select t.* from subs_discounts t
 where susg_ref_num = 15823946
 and end_date is null
 
-select rowid, t.* from subs_discounts t 
-where susg_ref_num = 13710290
---and end_date is null
 
 select * from subs_discounts
 
