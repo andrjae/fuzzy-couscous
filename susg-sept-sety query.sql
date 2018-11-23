@@ -212,14 +212,6 @@ and (main.act_starts < main.sepv_ends AND main.act_ends > main.sepv_starts)
 and (main.act_starts < main.serv_ends AND main.act_ends > main.serv_starts)  
 and (main.sepv_starts < main.serv_ends AND main.sepv_ends > main.serv_starts)  
 order by maac, susg
-main, service_param_values sepv
-where main.sepv_ref_num = sepv.ref_num
-and main.prli_charge_value is not null
-and (main.mipo_start < main.supa_end AND main.mipo_end > main.supa_start OR main.mipo_start is null)
-and (main.act_start < main.supa_end AND main.act_end > main.supa_start)  
---where  sepv_end - sepv_start < 0.5
---and trunc(sepv_start) = trunc(prev_sepv_start)         
-order by maac, susg
 
 
 
@@ -438,6 +430,8 @@ and (main.act_starts < main.sepv_ends AND main.act_ends > main.sepv_starts)
 and (main.act_starts < main.serv_ends AND main.act_ends > main.serv_starts)  
 and (main.sepv_starts < main.serv_ends AND main.sepv_ends > main.serv_starts)  
 order by maac, susg
+
+
 main, service_param_values sepv
 where main.sepv_ref_num = sepv.ref_num
 and main.prli_charge_value is not null
