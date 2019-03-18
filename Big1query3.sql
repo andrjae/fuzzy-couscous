@@ -190,10 +190,6 @@ DISC_PERCENTAGE, DISC_ABSOLUTE, PRICE, FTCO_REF_NUM, MIPO_START_DATE, MIPO_END_D
 from q1 LEFT JOIN ftco_disc ON q1.susg_ref_num = ftco_disc.susg_ref_num
 where (disc_start <= mipo_end_date AND disc_end >= mipo_start_date AND discounted = 0 OR discounted is null)
 )
-select * from q6
-where susg = 13893128
-
-
 select  
 qq4.MAAC, qq4.SUSG, qq4.PERIOD_CHARGE, qq4.FCIT_BILLING_SELECTOR, qq4.FCIT_TYPE_CODE, qq4.FCIT_BISE, qq4.FCIT_DESC, qq4.DISC_BILLING_SELECTOR, qq4.DISC_BISE, qq4.DISC_DESCR, 
 qq4.FCIT_FCDT_TYPE_CODE, qq4.CADC_REF_NUM, -least(sum(qq4.discount) over (partition by qq4.susg order by qq4.rnx) - qq4.discount + qq4.charge_value, - qq4.discount) DISCOUNT, 
