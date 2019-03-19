@@ -379,6 +379,7 @@ BEGIN
 IF SYSDATE >= tbcis.set_bill_allow_date THEN
 
 TBCIS.BREAK_DISCOUNT.BREAKS;
+/*
 DBMS_SCHEDULER.CREATE_JOB (job_name => 'BCCU1545',job_type => 'PLSQL_BLOCK',
 job_action => 'TBCIS.main_monthly_batch.start_DCH_cycle;',
 start_date => CURRENT_DATE+1/288,
@@ -391,6 +392,8 @@ WHILE l_run LOOP
  DBMS_LOCK.SLEEP(120);
  END IF;
 END LOOP;
+*/
+start_DCH_cycle;
 
 -- BCCU848 ja BCCU1284 NK KE
 
