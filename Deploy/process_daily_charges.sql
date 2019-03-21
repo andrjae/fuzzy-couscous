@@ -137,7 +137,7 @@ CREATE OR REPLACE PACKAGE BODY TBCIS.PROCESS_DAILY_CHARGES AS
         least(
         nvl(trunc(susp.end_date), :2), 
         :2, 
-        nvl(trunc(lead(susp.start_date) over (partition by susp.susg_ref_num, susp.sety_ref_num order by susp.start_date, susp.end_date nulls last)) - 1, :2)
+        nvl(trunc(lead(susp.start_date) over (partition by susp.susg_ref_num, susp.sety_ref_num,susp.sepa_ref_num order by susp.start_date, susp.end_date nulls last)) - 1, :2)
         ) susp_end_date
         from subs_service_parameters susp
         where  1=1
