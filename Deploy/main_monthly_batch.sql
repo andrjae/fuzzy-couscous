@@ -13,7 +13,8 @@ Change History
    Date       Person     Description
    ---------- -------- ----------------------------------------------------------
    20.04.2016 V.Tänover V 1.0  ARVO-442: Initial version. Kuulmaksude protsessid.
-   05.02.2018 A.Jaek    V 1.1  DOBAS-1721: Added DCH cycle
+   05.02.2019 A.Jaek    V 1.1  DOBAS-1721: Added DCH cycle
+   19.03.2019 A.Jaek    V 1.2  DOBAS-1932: Made DCH cycle call sequential
 
 
 
@@ -379,7 +380,7 @@ BEGIN
 IF SYSDATE >= tbcis.set_bill_allow_date THEN
 
 TBCIS.BREAK_DISCOUNT.BREAKS;
-/*
+/*  COMMENTED OUT BY DOBAS-1932
 DBMS_SCHEDULER.CREATE_JOB (job_name => 'BCCU1545',job_type => 'PLSQL_BLOCK',
 job_action => 'TBCIS.main_monthly_batch.start_DCH_cycle;',
 start_date => CURRENT_DATE+1/288,
@@ -393,7 +394,6 @@ WHILE l_run LOOP
  END IF;
 END LOOP;
 */
-start_DCH_cycle;
 
 -- BCCU848 ja BCCU1284 NK KE
 
@@ -449,6 +449,8 @@ WHILE l_run LOOP
  DBMS_LOCK.SLEEP(120);
  END IF;
 END LOOP;
+
+start_DCH_cycle; --DOBAS-1932
 
 dbsms('MON','MON valmis');
 

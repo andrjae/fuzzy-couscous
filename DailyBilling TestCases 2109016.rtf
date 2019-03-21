@@ -1,0 +1,66 @@
+{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang1033{\fonttbl{\f0\fnil\fcharset0 Calibri;}{\f1\fnil\fcharset186 Calibri;}}
+{\*\generator Riched20 10.0.17134}\viewkind4\uc1 
+\pard\sa200\sl276\slmult1\f0\fs22\lang37 USE CASES\par
+    TopConnect, kaugloetavad arvestid\par
+        \f1\lang1061 A1\f0\lang37 +\f1\lang1061  \f0\lang37 Arveread genereeritakse mobiilidele, mis ei kuulu "Large Master Account" masterkontole ja muud tingimused on t\'e4idetud\par
+        \f1\lang1061 A1\f0\lang37 -\f1\lang1061  \f0\lang37 Arveridu ei genereerita mobiilidele, mis kuuluvad "Large Master Account" masterkontole\par
+    Kehtivad teenuspaketid\par
+        \f1\lang1061 B\f0\lang37 +\f1\lang1061  \f0\lang37 Arveread genereeritakse mobiilidele, millel on ettemaksuta teenuspakett, mille kehtivusperiood kattub osaliselt v\'f5i t\'e4ielikult maksustamisperioodiga ja muud tingimused on t\'e4idetud\par
+        \f1\lang1061 B1\f0\lang37 -\f1\lang1061  \f0\lang37 Arveridu ei genereerita mobiilidele, perioodi jooksul, kus kehtib ettemaksuga teenuspakett (k\'f5nekaardid)\par
+        \f1\lang1061 B2\f0\lang37 -\f1\lang1061  \f0\lang37 Arveridu ei genereerita mobiilidele, millel pole maksustamisperioodil kehtivat ettemaksuta teenuspaketti\par
+    Teenuse aktiivsusperioodid \par
+        \f1\lang1061 C\f0\lang37 +\f1\lang1061  \f0\lang37 Arveread genereeritakse mobiilidele, millel on aktiivne teenus CHGGP , mille kehtivusperiood kattub osaliselt v\'f5i t\'e4ielikult maksustamisperioodiga ja muud tingimused on t\'e4idetud\f1\lang1061 .\f0\lang37            \par
+\f1\lang1061             \f0\lang37  Kui CHGGP teenus on olnud \'f6\'f6p\'e4eva jooksul aktiivne ja muud   tingimused on t\'e4idetud, siis arvestatakse selle p\'e4eva eest tasu proportsionaalselt - "1/kuu p\'e4evade arv"  s\'f5ltumata sellest, kas teenus on v\'f5i mitte sellel p\'e4eval avatud v\'f5i suletud\par
+        \f1\lang1061 C\f0\lang37 -\f1\lang1061  \f0\lang37 Arveridu ei genereerita mobiilidele, millel maksustamisperioodil CHGGP teenus (tulevikus v\'f5ib teenuseid lisanduda) pole aktiivne\par
+    Mobiili staatused\par
+        \f1\lang1061   D\f0\lang37 +\f1\lang1061  \f0\lang37 Arveread genereeritakse mobiilidele, mille aktiivse staatusega periood kattub osaliselt v\'f5i t\'e4ielikult maksustamisperioodiga ja muud tingimused on t\'e4idetud\par
+         \f1\lang1061 D1\f0\lang37 +\f1\lang1061  \f0\lang37 Kui mobiil on olnud \'f6\'f6p\'e4eva jooksul aktiivne pikemalt kui 12 tundi ja muud tingimused on t\'e4idetud, siis arvestatakse selle p\'e4eva eest tasu proportsionaalselt - "1/kuu p\'e4evade arv"  s\'f5ltumata sellest, kas mobiil on v\'f5i mitte sellel p\'e4eval aktiveeritud v\'f5i suletud\par
+         \f1\lang1061 D2\f0\lang37 +\f1\lang1061  \f0\lang37 Kui mobiil on esmakordselt avatud, siis arvestatatakse avamise p\'e4eva eest tasu proportsionaalselt - "1/kuu p\'e4evade arv"  s\'f5ltumata sellest kas aktiivsusaeg on pikem kui 12 tundi v\'f5i mitte\par
+        \f1\lang1061  D\f0\lang37 -\f1\lang1061  \f0\lang37 Arveridu ei genereerita mobiilidele, mis maksustamisperioodil pole olnud aktiivsed\par
+
+\pard\sa200\sl276\slmult1          \f1\lang1061 D1\f0\lang37 -\f1\lang1061  \f0\lang37 Kui mobiil suletakse (status='CLN' v\'f5i 'TC') ,viimasele aktiivsusperioodile eelneb 'TC'  periood ja viimase aktiivse periood pikkus on v\'e4hem kui 12 tundi p\'e4evas, siis seda viimast aktiivset perioodi ei maksustata\par
+\f1\lang1061         D1a- P\f0\lang1033\'e4\f1\lang1061 eva jooksul on 1 l\f0\lang1033\'fc\f1\lang1061 hike aktiivsusperiood\par
+       D1b- \f0\lang1033\'d6\'f6\f1\lang1061 sel on 1 l\f0\lang1033\'fc\f1\lang1061 hike aktiivsusperiood, mis kestab eelmisest \f0\lang1033\'f5\f1\lang1061 htust j\f0\lang1033\'e4\f1\lang1061 rgmise hommikuni\par
+      D1c- \f0\lang1033\'d6\'f6\f1\lang1061 p\f0\lang1033\'e4\f1\lang1061 evas on mitu aktiivsusperioodi vaheldumisi ajutiste sulgemistega. (Ei summerita p\f0\lang1033\'e4\f1\lang1061 eva tunde, k\f0\lang1033\'f5\f1\lang1061 ik l\f0\lang1033\'fc\f1\lang1061 hikesed aktiivsused j\f0\lang1033\'e4\'e4\f1\lang1061 vad arvestamata.)\f0\lang37\par
+
+\pard\sa200\sl276\slmult1     Teenuse parameetrid\par
+        \f1\lang1061 E \f0\lang37 P\'e4eva jooksul kehtivaks teenuse parameetriks loetakse seda parameetri v\'e4\'e4rtust, mille algusaeg on viimane enne kell 00:00:00 j\'e4rgneval p\'e4eval\par
+\f1\lang1061         E0+ Parameetrit ei muudeta\par
+       E1+ Parameetrit muudetakse p\f0\lang1033\'e4\f1\lang1061 eva jooksul\par
+      E2+ Parameetrit muudetakse p\f0\lang1033\'e4\f1\lang1061 eva jooksul 2 v\f0\lang1033\'f5\f1\lang1061 i rohkem korda\f0\lang37\par
+    Tasude arvestamine\par
+        \f1\lang1061 T0 \f0\lang37 P\'e4eva eest arvestatakse tasu, kui k\'f5ik eeltoodud +tingimused on t\'e4idetud. Juhul kui kehtib negatiivne tingimus, siis tasu p\'e4eva eest ei arvestata.\par
+        \f1\lang1061      \f0\lang37 P\'e4eva eest arvestatakse tasu proportsionaalselt - "1/kuu p\'e4evade arv" kuuhinnast. \par
+
+\pard\sa200\sl276\slmult1\f1\lang1061      \f0\lang37         Arvereal summeeritakse tasu kogu perioodi kohta ja esitatakse p\'e4evade arv, mille kohta tasu on arvestatud\par
+
+\pard\sa200\sl276\slmult1\f1\lang1061           T0a \f0\lang37 Teenuse kuuhind leitakse vastavalt p\'e4eva jooksul kehtinud teenuspaketile ja teenuse CHGGP parameetri v\'e4\'e4rtusele erihindade nimekirjast. \par
+\f1\lang1061           T0b \f0\lang37 Juhul kui erihinda pole, siis on kuuhind leitav vastavalt p\'e4eva jooksul kehtinud paketi kategooriale ja teenuse CHGGP parameetri v\'e4\'e4rtusele \'fcldhindade nimekirjast.\par
+
+\pard\sa200\sl276\slmult1         \f1\lang1061   T0c \f0\lang37 Kui arverea summa on null, siis seda arvele ei lisata.\par
+
+\pard\sa200\sl276\slmult1         \f1\lang1061   T0x \f0\lang37 Kui maksustamisperioodi l\'f5pp on tulevikus, siis arvestatakse tasu kuni maksustamisperioodi l\'f5puni. Tulevaste p\'e4evade tasu arvestatakse vastavalt arvutamishetkel kehtinud staatustele. Et v\'e4ltida \'fcmberarvestusi, peab olema maksustamisperioodi l\'f5pp alati enne protsduuri k\'e4ivitamise p\'e4eva.\par
+    T\'e4htajalised lepingud\par
+        \f1\lang1061 F0 \f0\lang37 Kui maksustamisperioodi p\'e4eval kehtib soodustuseta komplekti leping, siis arvestatakse CHGGP teenuse hinda sama moodi kui komplekti ei ole\par
+        \f1\lang1061 F1+ \f0\lang37 Kui maksustamisperioodi p\'e4eval kehtib soodustusega komplekti leping, siis arvestatakse CHGGP teenuse hinda koos soodustusega. Muid soodustusi samal ajal ei rakendata. Soodustusega hind summeeritakse p\'f6hiarvereale, eraldi sooduse rida arvele ei lisata.  \par
+            \f1\lang1061 F1a+ \f0\lang37 Komplekti soodustus v\'f5ib olla m\'e4\'e4ratud protsendina hinnast\par
+            \f1\lang1061 F1b+ \f0\lang37 Komplekti soodustus v\'f5ib olla m\'e4\'e4ratud allahindluse kuum\'e4\'e4rana. Sel huhul arvestatakse allahindlust proportsionaalset p\'e4evade arvuga - "1/kuu p\'e4evade arv" kuum\'e4\'e4rast.\par
+    Allahindlused\par
+        \f1\lang1061 G0 \f0\lang37 Allahindlusperioodi soodustused arvutatakse p\'e4evadele, mis algavad start_date p\'e4evast\par
+            Allahindlusperioodi pikkus v\'f5ib olla m\'e4\'e4ratud p\'e4evades v\'f5i kuudes. Soodustused arvutatakse p\'e4evadele, mis pole hilisemad, kui on m\'e4\'e4ratud allahindlusperioodi pikkusega v\'f5i end_date p\'e4evast. (Peaks t\'e4psustama.)\par
+        Allahindluste soodustused katakse arvele eraldi reana (kui crm=Y, kas peab testima crm=N?)\par
+        \f1\lang1061 G1+ \f0\lang37 P\'e4evadel, mil ei kehti komplektisoodustus ja kehtib kliendip\'f5hine soodustus (part_dico) arvestatakse viimast. Pakkumise soodustust nendel p\'e4evadel ei arvestata . \par
+            \f1\lang1061 G1a+ \f0\lang37 Kliendip\'f5hine soodustus v\'f5ib olla m\'e4\'e4ratud protsendina hinnast\par
+            \f1\lang1061 G1b+ \f0\lang37 Kliendip\'f5hine soodustus v\'f5ib olla m\'e4\'e4ratud allahindluse kuum\'e4\'e4rana. Sel huhul arvestatakse allahindlust proportsionaalset p\'e4evade arvuga - "1/kuu p\'e4evade arv" kuum\'e4\'e4rast.\par
+        \f1\lang1061 G2+ \f0\lang37 P\'e4evadel, mil ei kehti komplektisoodustus ega kliendip\'f5hine soodustus , aga kehtib pakkumise soodustus arvestatakse viimast. Juhul kui korraga kehtib 2 soodustust, siis need summeeritakse, aga nii et p\'e4eva kogusoodustus  ei \'fcleta p\'e4evale m\'e4\'e4ratud hinda.\par
+            \f1\lang1061 G2a+ \f0\lang37 Pakkumise soodustus v\'f5ib olla m\'e4\'e4ratud protsendina hinnast \par
+                \f1\lang1061 G2a1+ \f0\lang37 Protsendiga on m\'e4\'e4ratud allahindlus\par
+                \f1\lang1061 G2a2+ \f0\lang37 Protendiga on m\'e4\'e4ratud soodushind\par
+            \f1\lang1061  G2b+ \f0\lang37 Pakkumise soodustus v\'f5ib olla m\'e4\'e4ratud allahindluse kuum\'e4\'e4rana. Sel huhul arvestatakse allahindlust proportsionaalset p\'e4evade arvuga - "1/kuu p\'e4evade arv" kuum\'e4\'e4rast.\par
+                \f1\lang1061 G2b1+ \f0\lang37 Kuum\'e4\'e4raga on m\'e4\'e4ratud allahindlus\par
+                \f1\lang1061 G2b2+ \f0\lang37 Kuum\'e4\'e4raga on m\'e4\'e4ratud soodushind\par
+\par
+\par
+\par
+}
+ 
