@@ -376,7 +376,9 @@ CREATE OR REPLACE PACKAGE BODY TBCIS.PROCESS_DAILY_CHARGES AS
         case rn when 1 then 
         (charge_value-case discounted when 1 then greatest(least(nvl(monthly_markdown,0), charge_value), charge_value*nvl(monthly_disc_rate,0)/100) else 0 end)*main_days/month_days 
         else 0 end period_charge, 
-        -case discounted when 1 then greatest(least(nvl(monthly_markdown,0), charge_value), charge_value*nvl(monthly_disc_rate,0)/100) else 0 end * main_days/month_days incl_disc,
+        case rn when 1 then 
+        (-case discounted when 1 then greatest(least(nvl(monthly_markdown,0), charge_value), charge_value*nvl(monthly_disc_rate,0)/100) else 0 end * main_days/month_days)
+        else 0 end incl_disc,
         fcit_billing_selector, fcit_type_code, fcit_taty_type_code, fcit_bise,  fcit_desc,  disc_billing_selector, disc_bise, disc_descr, fcit_fcdt_type_code, cadc_ref_num,
         -case when disc_days is not null and nvl(discounted, 0) = 0 then 
               case when price is not null then
@@ -396,7 +398,9 @@ CREATE OR REPLACE PACKAGE BODY TBCIS.PROCESS_DAILY_CHARGES AS
         ,real_disc_start, real_disc_end, disc_days, sepv_start_real, rn, charge_value, price_type, curr_code, month_days, count_for_months, count_for_days, sudi_start_date,
         case when count_for_months is null and count_for_days is null or sudi_start_date is null then null 
                        else add_months(trunc(sudi_start_date), nvl(count_for_months,0)) + nvl(count_for_days,0) end sudi_end
-        , starts, ends, main_days, sudi_ref_num,  
+        , starts, ends, 
+        case rn when 1 then main_days else 0 end main_days, 
+        sudi_ref_num,  
         APPLY_CORR, DISCOUNTABLE, DISCOUNTS_AVAILABLE, SERVICE_NAME, SETY_REF_NUM, PRLI_CHARGE_VALUE, FICV_CHARGE_VALUE, SEPT_TYPE_CODE, SEPT_DESCRIPTION, SEPV_REF_NUM, 
         SEPV_PARAM_VALUE, SEPV_DESCRIPTION, DISC_START, DISC_END, PRECENTAGE, DISCOUNT_CODE, PRICING, MINIMUM_PRICE, DISC_PERCENTAGE, DISC_ABSOLUTE, PRICE, PADI_REF_NUM, CRM, MIXED_SERVICE, 
         FTCO_REF_NUM, SUSG_REF_NUM, FTCO_SEPT_TYPE_CODE, MIPO_START_DATE, MIPO_END_DATE, DISCOUNTED, MONTHLY_DISC_RATE, MONTHLY_MARKDOWN, PACKET_CODE, PACKET_DESCRIPTION, BICY_CYCLE_CODE
@@ -435,9 +439,9 @@ CREATE OR REPLACE PACKAGE BODY TBCIS.PROCESS_DAILY_CHARGES AS
         where not(sesu.end_date < :1 and sesu.end_date is not null)
         )
         select qq6.bicy_cycle_code, qq6.maac, qq6.susg, qq6.serv_num, qq6.sety_ref_num, qq6.service_name, qq6.sept_type_code, qq6.sept_description, qq6.sepv_ref_num, qq6.sepv_description, 
-        qq6.packet_code packet_discount, qq6.starts, qq6.ends, qq6.main_days, qq6.charge_value, qq6.price_type, qq6.curr_code, qq6.period_charge, qq6.incl_disc, qq6.fcit_billing_selector, qq6.fcit_type_code, 
-        qq6.fcit_taty_type_code, qq6.fcit_bise, qq6.fcit_desc, qq6.real_disc_start disc_start, qq6.real_disc_end disc_end, qq6.disc_days, 
-        qq6.discountx discount, qq6.discount_code, qq6.discount_description,
+        qq6.packet_code packet_discount, case rn when 1 then qq6.starts else null end starts, case rn when 1 then qq6.ends else null end ends, qq6.main_days, qq6.charge_value, qq6.price_type, 
+        qq6.curr_code, qq6.period_charge, qq6.incl_disc, qq6.fcit_billing_selector, qq6.fcit_type_code, qq6.fcit_taty_type_code, qq6.fcit_bise, qq6.fcit_desc, qq6.real_disc_start disc_start, 
+        qq6.real_disc_end disc_end, qq6.disc_days, qq6.discountx discount, qq6.discount_code, qq6.discount_description,
         qq6.disc_billing_selector, qq6.fcit_fcdt_type_code, qq6.disc_bise, qq6.disc_descr, qq6.cadc_ref_num, qq6.sudi_ref_num, qq6.crm, qq6.invo_end
         from qq6
         where r1=1;
