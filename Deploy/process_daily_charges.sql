@@ -11,7 +11,7 @@ CREATE OR REPLACE PACKAGE TBCIS.PROCESS_DAILY_CHARGES AS
    REVISIONS:
    Ver        Date        Author           Description
    ---------  ----------  ---------------  ------------------------------------
-   1.0        2019.02.05      AndresJaek       1. Created this package body.
+   1.0        2019.02.05      AndresJaek       1. Created this package specification.
 ******************************************************************************/
    c_calculate_mode CONSTANT  VARCHAR2(4) := 'CALC';
    c_proc_module_ref    CONSTANT VARCHAR2 (10) := '1545';
@@ -57,9 +57,11 @@ CREATE OR REPLACE PACKAGE BODY TBCIS.PROCESS_DAILY_CHARGES AS
    REVISIONS:
    Ver        Date        Author           Description
    ---------  ----------  ---------------  -------------------------------------------------------------------------------------
-   1.0        2018.11.21      AndresJaek       Created this package body.
+   1.2        2019.03.26      AndresJaek       DOBAS-1981 Fixed fill_inen_temp 
+                                                            and fill_inen_temp_small
    1.1        2019.03.18      AndresJaek       DOBAS-1932 fixes not creating invoices while running parallel with other  invoice
                                                creating procedures              
+   1.0        2018.11.21      AndresJaek       Created this package body.
 *******************************************************************************************************************************/
 
   
@@ -471,7 +473,7 @@ PROCEDURE fill_inen_temp(p_start_date DATE)
     case crm when 'N' then period_charge + nvl(discount,0) else period_charge end ACC_AMOUNT, 
     fcit_bise BILLING_SELECTOR_TEXT,fcit_desc ENTRY_TEXT, null ADDITIONAL_ENTRY_TEXT, maac
     from daily_charges_descr_temp
-    where period_charge != 0 OR nvl(crm, 'X') = 'N' 
+    where period_charge != 0 OR (nvl(crm, 'X') = 'N' and discount < 0)  --DOBAS-1981
     )
     group by REF_NUM, INVO_REF_NUM, SEC_AMT, ROUNDING_INDICATOR, UNDER_DISPUTE, CREATED_BY, DATE_CREATED, AMT_IN_CURR, BILLING_SELECTOR, FCIT_TYPE_CODE, TATY_TYPE_CODE, SUSG_REF_NUM, IADN_REF_NUM, 
     CURR_CODE, VMCT_TYPE_CODE, LAST_UPDATED_BY, DATE_UPDATED, DESCRIPTION, SEC_AMT_TAX, AMT_TAX_CURR, MANUAL_ENTRY, EVRE_COUNT, EVRE_DURATION, MODULE_REF, SEC_FIXED_CHARGE_VALUE, EVRE_CHAR_USAGE, 
@@ -564,7 +566,7 @@ PROCEDURE fill_inen_temp(p_start_date DATE)
     case crm when 'N' then period_charge + nvl(discount,0) else period_charge end ACC_AMOUNT, 
     fcit_bise BILLING_SELECTOR_TEXT,fcit_desc ENTRY_TEXT, null ADDITIONAL_ENTRY_TEXT, maac
     from daily_charges_descr_s_temp
-    where period_charge != 0 OR nvl(crm, 'X') = 'N'
+    where period_charge != 0 OR (nvl(crm, 'X') = 'N' and discount < 0)   --DOBAS-1981
     )
     group by REF_NUM, INVO_REF_NUM, SEC_AMT, ROUNDING_INDICATOR, UNDER_DISPUTE, CREATED_BY, DATE_CREATED, AMT_IN_CURR, BILLING_SELECTOR, FCIT_TYPE_CODE, TATY_TYPE_CODE, SUSG_REF_NUM, IADN_REF_NUM, 
     CURR_CODE, VMCT_TYPE_CODE, LAST_UPDATED_BY, DATE_UPDATED, DESCRIPTION, SEC_AMT_TAX, AMT_TAX_CURR, MANUAL_ENTRY, EVRE_COUNT, EVRE_DURATION, MODULE_REF, SEC_FIXED_CHARGE_VALUE, EVRE_CHAR_USAGE, 
